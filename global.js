@@ -79,13 +79,5 @@ for ( let i = 0; i < quickItems[ "start" ].length; i++ ) {
 }
 const strGuide = strGuideString;
 
-// 月ごとのシート
-const categoryColMonSh = 2;
-const userColMonSh = 3;
-const tax10ColMonSh = 4;
-const tax8ColMonSh = 5;
-const taxIncColMonSh = 6;
-const detailColMonSh = 8;
-
 // Utility
 const u_nl = "\n";
