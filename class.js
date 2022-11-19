@@ -428,7 +428,7 @@ class BotSheet extends SheetInfo {
   getFirstInputCell() {
     this.declaration.ranges.firstInput = this.sheet.getRange(
       this.declaration.rows.firstInput,
-      this._currentUser.cols.declaration,
+      this.input.cols.now,
       1,
       1
     );
@@ -789,5 +789,13 @@ class AliasSheet extends SheetInfo {
     const range = this.getRawAliasesRange();
     this.alias.values.raw = range.getValues();
     return this.alias.values.raw;
+  }
+
+  putAlias( inputs )
+  {
+    const funcName = `${ this.className }.putAlias`;
+    let targetRow = this.getNowInputRow() + 1;
+    this.sheet.getRange( targetRow, this.alias.cols.firstInput, 1, this.getInputColsNum() ).setValues( inputs );
+    log( funcName, "エイリアス登録完了", "", { type: "info" } );
   }
 }

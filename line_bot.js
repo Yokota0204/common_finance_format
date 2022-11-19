@@ -52,7 +52,7 @@ function doPost( e )
   } else if( botSh.requestType == 'conf_dc' ) { // 申告の確認への返信
     meta = declare( msg );
   } else if( botSh.requestType == 'conf_al' ) { // エイリアス登録の確認への返信
-    meta = registerAl( msg );
+    meta = registerAlias( msg );
   } else { // その他
     clearInputs();
     meta = replyMeta( 'error' );
@@ -147,18 +147,18 @@ function replyMeta( type )
   return [ `${ botSh.currentUser.hello + strGuide }`, 'quick', quickItems[ "start" ] ];
 }
 
-function registerAl( msg )
+function registerAlias( message )
 {
   let meta;
   const values = botSh.getInputRawValues();
-  if ( msg == "はい" ) {
+  if ( message == "はい" ) {
     if ( values.tax == "blank" ) values.tax = "";
     if ( values.price == "blank" ) values.price = "";
-    let inputs = buildAliasInputs( values.key, values.category, values.tax, values.price, values.detail );
-    inputsToAliase( inputs ); // botシートからaliasシートへ出力
+    let inputs = [ [ values.key, values.category, values.tax, values.price, values.detail, ], ];
+    aliasSh.putAlias( inputs ); // botシートからaliasシートへ出力
     clearInputs();
     meta = replyMeta( 'comp_al' );
-  } else if ( msg == 'いいえ' ) {
+  } else if ( message == 'いいえ' ) {
     meta = exitInput();
   } else {
     meta = replyMeta( 'conf_al' );
@@ -167,7 +167,7 @@ function registerAl( msg )
   return meta;
 }
 
-function declare( msg )
+function declare( message )
 {
   const funcName = "declare";
   let meta;
@@ -175,27 +175,14 @@ function declare( msg )
   if ( debug ) {
     log( funcName, values.tax, "values.tax" );
   }
-  if ( msg == "はい" ) {
-    let inputs = [
-      values.date,
-      values.category,
-      botSh.currentUser.name,
-    ];
-    if ( values.tax == "通常" ) {
-      inputs[ 3 ] = values.price;
-    } else {
-      inputs[ 3 ] = "-";
-    }
-    if ( values.tax == "軽減" ) {
-      inputs[ 4 ] = values.price;
-    } else {
-      inputs[ 4 ] = "-";
-    }
-    if ( values.tax == "税込" || values.tax == "税込み" ) {
-      inputs[ 5 ] = values.price;
-    } else {
-      inputs[ 5 ] = "-";
-    }
+  if ( message == "はい" ) {
+    let inputs = [];
+    inputs[ 0 ] = values.date;
+    inputs[ 1 ] = values.category;
+    inputs[ 2 ] = botSh.currentUser.name;
+    inputs[ 3 ] = values.tax == "通常" ? values.price : "-";
+    inputs[ 4 ] = values.tax == "軽減" ? values.price : "-";
+    inputs[ 5 ] = values.tax == "税込" || values.tax == "税込み" ? values.price : "-";
     inputs[ 6 ] = "";
     inputs[ 7 ] = values.detail;
     inputs = [ inputs ];
@@ -257,10 +244,6 @@ function flagOn( msg )
     }
     flagCell.setValue( 'on' );
     botSh.getRawDeclarationInputsRange().setValues( inputs );
-    // botSh.sheet.getRange( botSh.declaration.rows.categoryInput, botSh.currentUser.cols.declaration ).setValue( values[ alIndex ][ 1 ] );
-    // botSh.sheet.getRange( botSh.declaration.rows.taxInput, botSh.currentUser.cols.declaration ).setValue( values[ alIndex ][ 2 ] );
-    // botSh.sheet.getRange( botSh.declaration.rows.priceInput, botSh.currentUser.cols.declaration ).setValue( values[ alIndex ][ 3 ] );
-    // botSh.sheet.getRange( botSh.declaration.rows.detailInput, botSh.currentUser.cols.declaration ).setValue( values[ alIndex ][ 4 ] );
     meta = replyMeta( 'date' );
   }
   return meta;
@@ -529,21 +512,6 @@ function buildAliasInputs( key, category, tax, val, detail )
     'val' : val,
     'detail' : detail,
   };
-}
-
-function inputsToAliase( inputs )
-{
-  let targetRow =
-    aliasSh.sheet.getRange( 1, 1 )
-      .getNextDataCell( SpreadsheetApp.Direction.DOWN )
-      .getRow()
-    + 1;
-  aliasSh.sheet.getRange( targetRow, 1 ).setValue( inputs[ 'key' ] );
-  aliasSh.sheet.getRange( targetRow, 2 ).setValue( inputs[ 'category' ] );
-  aliasSh.sheet.getRange( targetRow, 3 ).setValue( inputs[ 'tax' ] );
-  aliasSh.sheet.getRange( targetRow, 4 ).setValue( inputs[ 'val' ] );
-  aliasSh.sheet.getRange( targetRow, 5 ).setValue( inputs[ 'detail' ] );
-  console.log( "エイリアス登録完了" );
 }
 
 /*
