@@ -232,13 +232,13 @@ class BotSheet extends SheetInfo {
     } else {
       if( flagValue == 'on' ) {
         this._requestType = 'dc_input';
-        this.input.cols.now= this._currentUser.cols.declaration;
+        this.input.cols.now = this._currentUser.cols.declaration;
         this.isDeclarationOrAlias = true;
         this.isDeclaration = true;
         this.isAlias = false;
       } else if( flagValue == 'al' ) {
         this._requestType = 'al_input';
-        this.input.cols.now= this._currentUser.cols.alias;
+        this.input.cols.now = this._currentUser.cols.alias;
         this.isDeclarationOrAlias = true;
         this.isDeclaration = false;
         this.isAlias = true;
@@ -401,9 +401,12 @@ class BotSheet extends SheetInfo {
     if ( debug ) {
       log( funcName, nowInputRow, "nowInputRow" );
     }
-    this.input.rows.now= nowInputRow && nowInputRow > this.input.rows.label && lastRow >= nowInputRow
-      ? nowInputRow
-      : this.input.rows.label;
+    const firstInputValue = this.getFirstInputCellValue();
+    if ( firstInputValue && nowInputRow > this.input.rows.label && lastRow >= nowInputRow ) {
+      this.input.rows.now = nowInputRow;
+    } else {
+      this.input.rows.now = this.input.rows.label;
+    }
     this.input.rows.next = this.input.rows.now + 1;
     return this.input.rows.now;
   }
@@ -420,6 +423,22 @@ class BotSheet extends SheetInfo {
     const cell = this.getFlagCell();
     this.flag.values.raw = cell.getValue();
     return this.flag.values.raw;
+  }
+
+  getFirstInputCell() {
+    this.declaration.ranges.firstInput = this.sheet.getRange(
+      this.declaration.rows.firstInput,
+      this._currentUser.cols.declaration,
+      1,
+      1
+    );
+    return this.declaration.ranges.firstInput;
+  }
+
+  getFirstInputCellValue() {
+    const range = this.getFirstInputCell();
+    this.declaration.values.firstInput = range.getValue();
+    return this.declaration.values.firstInput;
   }
 
   getInputRawRange() {
@@ -529,8 +548,9 @@ class BotSheet extends SheetInfo {
         message = false;
       }
       if ( !message ) {
-        for ( let i = 0; i < alVals.length; i++ ) {
-          let key = alVals[ i ][ 0 ];
+        const values = aliasSh.getRawAliases();
+        for ( let i = 0; i < values.length; i++ ) {
+          let key = values[ i ][ 0 ];
           console.log( key );
           if ( key == message ) {
             message = false;
@@ -711,5 +731,63 @@ class MonthSheet extends FormatSheet {
     log( funcName, "申告シート入力完了", "", { type: "info" } );
     calcTax( this.sheet ); // 税込み金額を計算し出力
     sort( this.sheet ) // 日付順に並び替え
+  }
+}
+
+class AliasSheet extends SheetInfo {
+  constructor( sheetName ) {
+    super( sheetName );
+    this.input.cols.first = 1;
+    this.input.rows.label = 1;
+    this.input.rows.first = 2;
+    this.alias = template();
+    this.alias.cols.keyInput = 1;
+    this.alias.cols.categoryInput = 2;
+    this.alias.cols.taxInput = 3;
+    this.alias.cols.priceInput = 4;
+    this.alias.cols.detailInput = 5;
+    this.alias.cols.firstInput = 1;
+    this.alias.cols.lastInput = 5;
+    this.alias.rows.labelInput = 1;
+    this.alias.rows.firstInput = 2;
+  }
+
+  getInputColsNum() {
+    this.alias.cols.numInput = this.alias.cols.lastInput - this.alias.cols.firstInput + 1;
+    return this.alias.cols.numInput;
+  }
+
+  getNowInputRow() {
+    const nowInputRow = this.sheet.getRange(
+      this.alias.rows.labelInput,
+      this.alias.cols.firstInput
+    ).getNextDataCell( SpreadsheetApp.Direction.DOWN ).getRow();
+    if ( nowInputRow > this.alias.rows.labelInput && nowInputRow < 200 ) {
+      this.alias.rows.nowInput = nowInputRow;
+    } else {
+      this.alias.rows.nowInput = this.alias.rows.labelInput;
+    }
+    return this.alias.rows.nowInput;
+  }
+
+  getRawAliasesNum() {
+    this.alias.numbers.raw = this.getNowInputRow() - this.alias.rows.labelInput;
+    return this.alias.numbers.raw;
+  }
+
+  getRawAliasesRange() {
+    this.alias.ranges.raw = this.sheet.getRange(
+      this.alias.rows.firstInput,
+      this.alias.cols.firstInput,
+      this.getRawAliasesNum(),
+      this.getInputColsNum()
+    );
+    return this.alias.ranges.raw;
+  }
+
+  getRawAliases() {
+    const range = this.getRawAliasesRange();
+    this.alias.values.raw = range.getValues();
+    return this.alias.values.raw;
   }
 }

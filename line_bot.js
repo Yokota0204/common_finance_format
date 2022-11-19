@@ -215,6 +215,7 @@ function declare( msg )
 
 function flagOn( msg )
 {
+  const funcName = "flagOn";
   let meta;
   const flagCell = botSh.flag.ranges.valueCell;
   if ( msg == '申告' ) {
@@ -238,16 +239,28 @@ function flagOn( msg )
     meta = replyMeta( 'key' );
     meta[ 0 ] = buildAlStrMsg( meta[ 0 ] );
   } else {
-    alIndex = aliasNum( alVals, msg );
+    const values = aliasSh.getRawAliases();
+    alIndex = aliasNum( values, msg );
     if( alIndex === false ) {
       return replyMeta( 'error' );
     }
-    console.log( "Alias number " + alIndex + " called." );
+    log( funcName, "Alias number " + alIndex + " called.", "", { type : "info" } );
+    let inputs = [
+      [ '' ],
+      [ values[ alIndex ][ 1 ] ],
+      [ values[ alIndex ][ 2 ] ],
+      [ values[ alIndex ][ 3 ] ],
+      [ values[ alIndex ][ 4 ] ],
+    ];
+    if ( debug ) {
+      log( funcName, inputs, "inputs" );
+    }
     flagCell.setValue( 'on' );
-    botSh.sheet.getRange( botSh.declaration.rows.categoryInput, botSh.currentUser.cols.declaration ).setValue( alVals[ alIndex ][ 1 ] );
-    botSh.sheet.getRange( botSh.declaration.rows.taxInput, botSh.currentUser.cols.declaration ).setValue( alVals[ alIndex ][ 2 ] );
-    botSh.sheet.getRange( botSh.declaration.rows.priceInput, botSh.currentUser.cols.declaration ).setValue( alVals[ alIndex ][ 3 ] );
-    botSh.sheet.getRange( botSh.declaration.rows.detailInput, botSh.currentUser.cols.declaration ).setValue( alVals[ alIndex ][ 4 ] );
+    botSh.getRawDeclarationInputsRange().setValues( inputs );
+    // botSh.sheet.getRange( botSh.declaration.rows.categoryInput, botSh.currentUser.cols.declaration ).setValue( values[ alIndex ][ 1 ] );
+    // botSh.sheet.getRange( botSh.declaration.rows.taxInput, botSh.currentUser.cols.declaration ).setValue( values[ alIndex ][ 2 ] );
+    // botSh.sheet.getRange( botSh.declaration.rows.priceInput, botSh.currentUser.cols.declaration ).setValue( values[ alIndex ][ 3 ] );
+    // botSh.sheet.getRange( botSh.declaration.rows.detailInput, botSh.currentUser.cols.declaration ).setValue( values[ alIndex ][ 4 ] );
     meta = replyMeta( 'date' );
   }
   return meta;
@@ -307,7 +320,8 @@ function exitInput()
 function buildAlStrMsg( msg )
 {
   msg = msg + '\n\n【登録済みのエイリアス】';
-  alVals.forEach( ( key ) => {
+  const values = aliasSh.getRawAliases();
+  values.forEach( ( key ) => {
     const val = key[ 0 ];
     msg = msg + "\n・" + val;
   } );
@@ -520,15 +534,15 @@ function buildAliasInputs( key, category, tax, val, detail )
 function inputsToAliase( inputs )
 {
   let targetRow =
-    aliasSh.getRange( 1, 1 )
+    aliasSh.sheet.getRange( 1, 1 )
       .getNextDataCell( SpreadsheetApp.Direction.DOWN )
       .getRow()
     + 1;
-  aliasSh.getRange( targetRow, 1 ).setValue( inputs[ 'key' ] );
-  aliasSh.getRange( targetRow, 2 ).setValue( inputs[ 'category' ] );
-  aliasSh.getRange( targetRow, 3 ).setValue( inputs[ 'tax' ] );
-  aliasSh.getRange( targetRow, 4 ).setValue( inputs[ 'val' ] );
-  aliasSh.getRange( targetRow, 5 ).setValue( inputs[ 'detail' ] );
+  aliasSh.sheet.getRange( targetRow, 1 ).setValue( inputs[ 'key' ] );
+  aliasSh.sheet.getRange( targetRow, 2 ).setValue( inputs[ 'category' ] );
+  aliasSh.sheet.getRange( targetRow, 3 ).setValue( inputs[ 'tax' ] );
+  aliasSh.sheet.getRange( targetRow, 4 ).setValue( inputs[ 'val' ] );
+  aliasSh.sheet.getRange( targetRow, 5 ).setValue( inputs[ 'detail' ] );
   console.log( "エイリアス登録完了" );
 }
 
@@ -655,7 +669,6 @@ function sendMessage( uid, msg )
     const response = UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/push", replyData );
     if ( debug ) {
       log( funcName, msg, "msg" );
-      log( funcName, items, "items" );
     }
     log( funcName, "Response: " + funcName + " has fired.", "", { type : "info" } );
     log( funcName, response.getResponseCode(), "response code", { type : "info" } );

@@ -17,19 +17,11 @@ const listSh = new ListSheet( "list" );
 const formatSh = new FormatSheet( "フォーマット" );
 const summarySh = thisSs.getSheetByName("項目ごとまとめ");
 const sandboxSh = thisSs.getSheetByName("sandbox");
-const aliasSh = thisSs.getSheetByName("alias");
+const aliasSh = new AliasSheet( "alias" );
 
 /*
  * LINE bot
  */
-
-// エイリアスシートの情報
-let alStrCol = 1;
-let alLastCol = 5;
-let alStrRow = 2;
-let alLastRow = aliasSh.getRange( 1, alStrCol ).getNextDataCell( SpreadsheetApp.Direction.DOWN ).getRow();
-
-const alVals = aliasSh.getRange( alStrRow, alStrCol, alLastRow - alStrRow + 1, alLastCol - alStrCol + 1 ).getValues();
 
 const tasks = {
   kitchen: {
