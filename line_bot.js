@@ -11,47 +11,47 @@ function doGet( e )
 
 function doPost( e )
 {
+  const funcName = "doPost";
   let meta;
   // リクエストイベントの取得
   const events = JSON.parse( e.postData.contents ).events;
   const event = events[ 0 ];
-  console.log( event );
+  if ( debug ) {
+    log( funcName, event, "event" );
+  }
   const token = event.replyToken;
   const msg = event.message.text;
   const uid = event.source.userId;
-  sendMsg( uid, '送信中...' );
+  sendMessage( uid, '送信中...' );
+  botSh.setCurrentUser = uid;
   // リクエストしてきたユーザーの認証
-  if ( !userSet( uid ) ) {
+  if ( !botSh.currentUser ) {
     meta = [ "無効なユーザーです。", 'normal', [] ];
   }
-  // リクエストの種類を確認
-  if ( !setReqType() ) {
-    meta = exitInput();
-  }
-  // 今まで入力した項目を取得
-  getInputVal();
+  botSh.setRequestType = botSh.getFlagValue();
   // 対象の月のシートを取得
-  setMonSh();
-
+  if ( botSh.isDeclarationOrAlias ) {
+    botSh.setInputMonthSheet = botSh.getInputRawValues();
+  }
   if ( msg == "中止" ) {
     meta = exitInput();
-  } else if ( reqType == 'start' ) { // 入力なしからの最初のチャット
+  } else if ( botSh.requestType == 'start' ) { // 入力なしからの最初のチャット
     meta = flagOn( msg );
-  } else if( reqType == 'kc_input' ) { // キッチンの入力中
+  } else if( botSh.requestType == 'kc_input' ) { // キッチンの入力中
     meta = putWork( msg, "kitchen" );
-  } else if( reqType == 'ld_input' ) { // 洗濯の入力中
+  } else if( botSh.requestType == 'ld_input' ) { // 洗濯の入力中
     meta = putWork( msg, "laundry" );
-  } else if( reqType == 'tl_input' ) { // トイレの入力中
+  } else if( botSh.requestType == 'tl_input' ) { // トイレの入力中
     meta = putWork( msg, "toilet" );
-  } else if( reqType == 'bt_input' ) { // お風呂の入力中
+  } else if( botSh.requestType == 'bt_input' ) { // お風呂の入力中
     meta = putWork( msg, "bath" );
-  } else if( reqType == 'dc_input' ) { // 申告の入力中
-    meta = writeDec( msg );
-  } else if( reqType == 'al_input' ) { // エイリアスの入力中
-    meta = writeAl( msg );
-  } else if( reqType == 'conf_dc' ) { // 申告の確認への返信
+  } else if( botSh.requestType == 'dc_input' ) { // 申告の入力中
+    meta = botSh.addDeclarationContent( msg );
+  } else if( botSh.requestType == 'al_input' ) { // エイリアスの入力中
+    meta = botSh.addAliasContent( msg );
+  } else if( botSh.requestType == 'conf_dc' ) { // 申告の確認への返信
     meta = declare( msg );
-  } else if( reqType == 'conf_al' ) { // エイリアス登録の確認への返信
+  } else if( botSh.requestType == 'conf_al' ) { // エイリアス登録の確認への返信
     meta = registerAl( msg );
   } else { // その他
     clearInputs();
@@ -60,94 +60,101 @@ function doPost( e )
   doReply( token, meta[ 0 ], meta[ 1 ], meta[ 2 ]);
 }
 
-function userSet( uid )
-{
-  userIndex = uids[ 0 ].indexOf( uid );
-  if ( userIndex < 0 ) {
-    return false;
-  }
-  flgInputCol = firstUserFlagColBotSh + userIndex;
-  dcInputCol = firstUserDcColBotSh + userIndex;
-  alInputCol = firstUserAlColBotSh + userIndex;
-  userName = userNames[ 0 ][ userIndex ];
-  helloUser = `${ userName }さん、こんにちは。`
-  return true;
-}
-
 function replyMeta( type )
 {
-  const metaData = {
-    'empty' : [ '', 'normal', [] ],
-    'error' : [ `${ helloUser + strGuide }`, 'quick', quickItems[ "start" ] ],
-    'exit' : [ `申告を中止しました。${ strGuide }`, 'quick', quickItems[ "start" ] ],
-
-    'date' : [ '申告する日付を入力してください。', 'quick', quickItems[ "date" ] ],
-    'key' : [ "キーを送信してください。", 'normal', [] ],
-    'genre' : [ addGenres( "ジャンルを教えて下さい。\n" ), 'quick', buildGenreItems() ],
-    'tax' : [
+  const funcName = "replayMeta";
+  if ( type == "empty" ) {
+    return [ '', 'normal', [] ];
+  } else if ( type == "error" ) {
+    return [ `${ botSh.currentUser.hello + strGuide }`, 'quick', quickItems[ "start" ] ];
+  } else if ( type == "exit" ) {
+    return [ `申告を中止しました。${ strGuide }`, 'quick', quickItems[ "start" ] ];
+  } else if ( type == "date" ) {
+    return [ '申告する日付を入力してください。', 'quick', quickItems[ "date" ] ];
+  } else if ( type == "key" ) {
+    return [ "キーを送信してください。", 'normal', [] ];
+  } else if ( type == "category" ) {
+    const meta = categoryReplayMeta();
+    return [ "カテゴリーを教えて下さい。\n" + buildMenu( meta.menu ), 'quick', meta.items ];
+  } else if ( type == "tax" ) {
+    return [
       "入力する金額には税金は含みますか？\n・税込\n・軽減\n・通常",
       'quick',
       quickItems[ "tax" ],
-    ],
-    'price' : [ "金額を教えて下さい。", 'normal', [] ],
-    'detail' : [ '備考欄に出力する文言を入力してください。', 'normal', [] ],
-    'conf_dc' : [ '', 'quick', quickItems[ "conf" ] ],
-    'comp_dc' : [ "申告書への記載が完了しました。", 'normal', [] ],
-
-    'price_al' : [ "金額を教えて下さい。" + blankGuide, 'quick', [ 'blank' ] ],
-    'tax_al' : [
+    ];
+  } else if ( type == "price" ) {
+    return [ "金額を教えて下さい。", 'normal', [] ];
+  } else if ( type == "detail" ) {
+    return [ '備考欄に出力する文言を入力してください。', 'normal', [] ];
+  } else if ( type == "comp_dc" ) {
+    return [ "申告書への記載が完了しました。", 'normal', [] ];
+  } else if ( type == "conf_dc" || type == "conf_al" ) {
+    return [ '', 'quick', quickItems[ "conf" ] ];
+  } else if ( type == "price_al" ) {
+    return [ "金額を教えて下さい。" + blankGuide, 'quick', [ 'blank' ] ];
+  } else if ( type == "tax_al" ) {
+    return [
       "入力する金額には税金は含みますか？" + blankGuide + "\n・税込\n・軽減\n・通常",
       'quick',
       quickItems[ "taxAlias" ],
-    ],
-    'conf_al' : [ '', 'quick', quickItems[ "conf" ] ],
-    'comp_al' : [ "エイリアスへの登録が完了しました。", 'normal', [] ],
-
-    'invalid_date' : [
+    ];
+  } else if ( type == "comp_al" ) {
+    return [ "エイリアスへの登録が完了しました。", 'normal', [] ];
+  } else if ( type == "invalid_date" ) {
+    return [
       "日付を入力してください。" + stopGuide,
       'quick',
       quickItems[ "date" ],
-    ],
-    'invalid_genre' : [
-      addGenres( "正しいジャンルを入力してください。\n" ) + stopGuide,
+    ];
+  } else if ( type == "invalid_category" ) {
+    const meta = categoryReplayMeta();
+    return [
+      "正しいカテゴリーを入力してください。\n" + buildMenu( meta.menu ) + stopGuide,
       'quick',
-      buildGenreItems()
-    ],
-    'invalid_tax' : [
+      meta.items
+    ];
+  } else if ( type == "invalid_tax" ) {
+    return [
       "正しい値を入力して下しさい。\n・税込\n・軽減\n・通常" + stopGuide,
       'quick',
       quickItems[ "tax" ]
-    ],
-    'invalid_price' : [ "金額を入力してください。" + stopGuide, 'normal', [] ],
-    
-    'invalid_key' : [ "既に使用されているキーです。\n別のキーを入力してください。", 'normal', [] ],
-    'invalid_tax_al' : [
-      "正しい値を入力して下しさい。" + blankGuide +
-        "\n・税込\n・軽減\n・通常\n・blank" + stopGuide,
+    ];
+  } else if ( type == "invalid_price" ) {
+    return [ "金額を入力してください。" + stopGuide, 'normal', [] ];
+  } else if ( type == "invalid_key" ) {
+    return [ "既に使用されているキーです。\n別のキーを入力してください。", 'normal', [] ];
+  } else if ( type == "invalid_tax_al" ) {
+    return [
+      "正しい値を入力して下しさい。" + blankGuide + "\n・税込\n・軽減\n・通常\n・blank" + stopGuide,
       'quick',
       quickItems[ "taxAlias" ],
-    ],
-    'invalid_price_al' : [
+    ];
+  } else if ( type == "invalid_price_al" ) {
+    return [
       "金額を入力してください。" + blankGuide + stopGuide,
       'quick',
       quickItems[ "priceAlias" ],
-    ],
-
-    'kitchen' : [ helloUser + buildGuideMsg( "kitchen" ), 'quick', quickItems[ "kitchen" ] ],
-    'toilet' : [ helloUser + "\n「トイレ掃除」を申告しますか？", 'quick', quickItems[ "toilet" ] ],
-    'laundry' : [ helloUser + buildGuideMsg( "laundry" ), 'quick', quickItems[ "laundry" ] ],
-    'bath' : [ helloUser + "\n「お風呂掃除」を申告しますか？", 'quick', quickItems[ "bath" ] ],
+    ];
+  } else if ( type == "kitchen" ) {
+    return [ botSh.currentUser.hello + buildGuideMsg( "kitchen" ), 'quick', quickItems[ "kitchen" ] ];
+  } else if ( type == "toilet" ) {
+    return [ botSh.currentUser.hello + "\n「トイレ掃除」を申告しますか？", 'quick', quickItems[ "toilet" ] ];
+  } else if ( type == "laundry" ) {
+    return [ botSh.currentUser.hello + buildGuideMsg( "laundry" ), 'quick', quickItems[ "laundry" ] ];
+  } else if ( type == "bath" ) {
+    return [ botSh.currentUser.hello + "\n「お風呂掃除」を申告しますか？", 'quick', quickItems[ "bath" ] ];
   }
-  return metaData[ type ];
+  return [ `${ botSh.currentUser.hello + strGuide }`, 'quick', quickItems[ "start" ] ];
 }
 
 function registerAl( msg )
 {
   let meta;
+  const values = botSh.getInputRawValues();
   if ( msg == "はい" ) {
-    if ( inputTax == "blank" ) inputTax = "";
-    if ( inputMoney == "blank" ) inputMoney = "";
-    let inputs = buildAliasInputs( inputKey, inputGenre, inputTax, inputMoney, inputDetail );
+    if ( values.tax == "blank" ) values.tax = "";
+    if ( values.price == "blank" ) values.price = "";
+    let inputs = buildAliasInputs( values.key, values.category, values.tax, values.price, values.detail );
     inputsToAliase( inputs ); // botシートからaliasシートへ出力
     clearInputs();
     meta = replyMeta( 'comp_al' );
@@ -160,81 +167,43 @@ function registerAl( msg )
   return meta;
 }
 
-function writeAl( msg )
-{
-  let meta, row;
-  if ( inputStage == "key" ) {
-    if ( msg == "キッチン" || msg == "申告" || msg == "エイリアス" ||
-        msg == "トイレ掃除" || msg == "お風呂掃除" || msg == "洗濯物" || 
-        msg == "はい" || msg == "blank" || msg == "中止" ) {
-      msg = false;
-    }
-    if ( !msg ) {
-      for ( let i = 0; i < alVals.length; i++ ) {
-        let key = alVals[ i ][ 0 ];
-        console.log( key );
-        if ( key == msg ) {
-          msg = false;
-          break;
-        }
-      }
-    }
-    if ( !msg ) {
-      meta = replyMeta( 'invalid_key' );
-      meta[ 0 ] = buildAlStrMsg( meta[ 0 ] );
-    } else {
-      meta = replyMeta( 'genre' );
-      row = 2;
-    }
-  } else if ( inputStage == "genre" ) {
-    msg = validateGenre( msg );
-    meta = !msg ? replyMeta( 'invalid_genre' ) : replyMeta( 'tax_al' );
-    row = 3;
-  } else if ( inputStage == "tax" ) {
-    msg =
-      msg != "通常" && msg != "軽減" && msg != "税込み" && msg != "税込" && msg != "blank" ?
-      false :
-      msg;
-    meta = !msg ? replyMeta( 'invalid_tax_al' ) : replyMeta( 'price_al' );
-    row = 4;
-  } else if ( inputStage == "price" ) {
-    msg = ( isNaN( Number( msg.replace( ",", "" ) ) ) && msg != "blank" ) ?
-      false :
-      msg;
-    meta = !msg ? replyMeta( 'invalid_price_al' ) : replyMeta( 'detail' );
-    row = 5;
-  } else if ( inputStage == "detail" ) {
-    meta = replyMeta( 'conf_al' );
-    row = 6;
-  }
-  if ( msg !== false ) {
-    const inputCell = botSh.getRange( row, alInputCol );
-    inputCell.setValue( msg );
-    if( inputStage == 'detail' ) {
-      meta[ 0 ] = buildAlConfMsg();
-    }
-  }
-  return meta;
-}
-
 function declare( msg )
 {
+  const funcName = "declare";
   let meta;
-  console.log( 'inputTax : ' + inputTax );
+  const values = botSh.getInputRawValues();
+  if ( debug ) {
+    log( funcName, values.tax, "values.tax" );
+  }
   if ( msg == "はい" ) {
-    let taxCol;
-    if ( inputTax == "通常" ) {
-      taxCol = tax10ColMonSh;
-    } else if ( inputTax == "軽減" ) {
-      taxCol = tax8ColMonSh;
-    } else if ( inputTax == "税込" || inputTax == "税込み" ) {
-      taxCol = taxIncColMonSh;
+    let inputs = [
+      values.date,
+      values.category,
+      botSh.currentUser.name,
+    ];
+    if ( values.tax == "通常" ) {
+      inputs[ 3 ] = values.price;
     } else {
-      return exitInput();
+      inputs[ 3 ] = "-";
     }
-    console.log( 'taxCol' + String( taxCol ) );
-    const inputs = buildInputs( inputDate, inputGenre, userName, taxCol, inputMoney, inputDetail );
-    inputsToMonthSh( inputs ); // botシートから申告シートへ出力
+    if ( values.tax == "軽減" ) {
+      inputs[ 4 ] = values.price;
+    } else {
+      inputs[ 4 ] = "-";
+    }
+    if ( values.tax == "税込" || values.tax == "税込み" ) {
+      inputs[ 5 ] = values.price;
+    } else {
+      inputs[ 5 ] = "-";
+    }
+    inputs[ 6 ] = "";
+    inputs[ 7 ] = values.detail;
+    inputs = [ inputs ];
+    if ( debug ) {
+      log( funcName, inputs, "inputs" );
+    }
+    const monthSh = new MonthSheet( botSh.targetSheet.sheetName );
+    monthSh.putInputs( inputs ); // botシートから申告シートへ出力
     clearInputs();
     meta = replyMeta( 'comp_dc' );
   } else {
@@ -244,70 +213,28 @@ function declare( msg )
   return meta;
 }
 
-function writeDec( msg )
-{
-  let meta, row;
-  if ( inputStage == "date" ) {
-    msg = validateDate( msg );
-    if ( !msg ) {
-      meta = replyMeta( 'invalid_date' );
-    }
-    row = 2;
-  } else if ( inputStage == "genre" ) {
-    msg = validateGenre( msg );
-    if ( !msg ) {
-      meta = replyMeta( 'invalid_genre' );
-    }
-    row = 3;
-  } else if ( inputStage == "tax" ) {
-    msg = msg != "通常" && msg != "軽減" && msg != "税込み" && msg != "税込" ?
-      false : msg;
-    if ( !msg ) {
-      meta = replyMeta( 'invalid_tax' );
-    }
-    row = 4;
-  } else if ( inputStage == "price" ) {
-    msg = isNaN( Number( msg.replace( ",", "" ) ) ) ? false : msg;
-    if ( !msg ) {
-      meta = replyMeta( 'invalid_price' );
-    }
-    row = 5;
-  } else if ( inputStage == "detail" ) {
-    row = 6;
-  }
-  if ( msg !== false ) {
-    const inputCell = botSh.getRange( row, dcInputCol );
-    inputCell.setValue( msg );
-    setReqType();
-    meta = replyMeta( inputStage );
-    if( inputStage == 'conf_dc' ) {
-      meta[ 0 ] = buildConfMsg();
-    }
-  }
-  return meta;
-}
-
 function flagOn( msg )
 {
   let meta;
+  const flagCell = botSh.flag.ranges.valueCell;
   if ( msg == '申告' ) {
     clearInputs();
-    flgCellBotSh.setValue( 'on' );
+    flagCell.setValue( 'on' );
     meta = replyMeta( 'date' );
   } else if ( msg == 'キッチン' ) {
-    flgCellBotSh.setValue( "kc" );
+    flagCell.setValue( "kc" );
     meta = replyMeta( 'kitchen' );
   } else if ( msg == '洗濯' ) {
-    flgCellBotSh.setValue( "ld" );
+    flagCell.setValue( "ld" );
     meta = replyMeta( 'laundry' );
   } else if ( msg == 'トイレ掃除' ) {
-    flgCellBotSh.setValue( "tl" );
+    flagCell.setValue( "tl" );
     meta = replyMeta( 'toilet' );
   } else if ( msg == 'お風呂掃除' ) {
-    flgCellBotSh.setValue( "bt" );
+    flagCell.setValue( "bt" );
     meta = replyMeta( 'bath' );
   } else if ( msg == 'エイリアス' ) {
-    flgCellBotSh.setValue( "al" );
+    flagCell.setValue( "al" );
     meta = replyMeta( 'key' );
     meta[ 0 ] = buildAlStrMsg( meta[ 0 ] );
   } else {
@@ -316,24 +243,44 @@ function flagOn( msg )
       return replyMeta( 'error' );
     }
     console.log( "Alias number " + alIndex + " called." );
-    flgCellBotSh.setValue( 'on' );
-    botSh.getRange( genreRowBotSh, dcInputCol ).setValue( alVals[ alIndex ][ 1 ] );
-    botSh.getRange( taxRowBotSh, dcInputCol ).setValue( alVals[ alIndex ][ 2 ] );
-    botSh.getRange( moneyRowBotSh, dcInputCol ).setValue( alVals[ alIndex ][ 3 ] );
-    botSh.getRange( detailRowBotSh, dcInputCol ).setValue( alVals[ alIndex ][ 4 ] );
+    flagCell.setValue( 'on' );
+    botSh.sheet.getRange( botSh.declaration.rows.categoryInput, botSh.currentUser.cols.declaration ).setValue( alVals[ alIndex ][ 1 ] );
+    botSh.sheet.getRange( botSh.declaration.rows.taxInput, botSh.currentUser.cols.declaration ).setValue( alVals[ alIndex ][ 2 ] );
+    botSh.sheet.getRange( botSh.declaration.rows.priceInput, botSh.currentUser.cols.declaration ).setValue( alVals[ alIndex ][ 3 ] );
+    botSh.sheet.getRange( botSh.declaration.rows.detailInput, botSh.currentUser.cols.declaration ).setValue( alVals[ alIndex ][ 4 ] );
     meta = replyMeta( 'date' );
-  } 
+  }
   return meta;
 }
 
 function putWork( msg, type ) {
+  const funcName = "putWork";
   let meta;
-  const taskVal = taskVals[ type ];
+  const taskVal = tasks[ type ];
   let val = taskVal ? taskVal[ msg ] : false;
   const items = quickItems[ type ];
   if ( val ) {
-    inputs = buildInputs( today, taskVal.name, userName, taxIncColMonSh, val, msg );
-    inputsToMonthSh( inputs );
+    const inputs = [
+      [
+        dateNow,
+        taskVal.name,
+        botSh.currentUser.name,
+        "-",
+        "-",
+        val,
+        "",
+        msg,
+      ],
+    ];
+    if ( debug ) {
+      log( funcName, inputs, "inputs" );
+    }
+    const sheetName = botSh.targetSheet.sheetName;
+    if ( debug ) {
+      log( funcName, sheetName, "sheetName" );
+    }
+    const monthSh = new MonthSheet( sheetName );
+    monthSh.putInputs( inputs );
     clearInputs();
     meta = [ taskVal.name + "の「" + msg + "」を申告しました。", 'normal', [] ];
   } else {
@@ -357,96 +304,6 @@ function exitInput()
   return replyMeta( 'exit' );
 }
 
-function setReqType()
-{
-  flgCellBotSh = botSh.getRange( flgRowBotSh, flgInputCol );
-  const flgVal = flgCellBotSh.getValue();
-  if ( flgVal == '' ) {
-    reqType = 'start';
-    inputStage = '';
-  } else if ( flgVal == 'kc' ) {
-    reqType = 'kc_input';
-    inputStage = 'all';
-  } else if ( flgVal == 'ld' ) {
-    reqType = 'ld_input';
-    inputStage = 'all';
-  } else if ( flgVal == 'tl' ) {
-    reqType = 'tl_input';
-    inputStage = 'all';
-  } else if ( flgVal == 'bt' ) {
-    reqType = 'bt_input';
-    inputStage = 'all';
-  } else {
-    let col;
-    if( flgVal == 'on' ) {
-      reqType = 'dc_input';
-      col = dcInputCol;
-    } else if( flgVal == 'al' ) {
-      reqType = 'al_input';
-      col = alInputCol;
-    } else {
-      return false;
-    }
-    const row2Val = botSh.getRange( 2, col ).getValue();
-    const lastRow =
-      row2Val == '' ? 1 :
-      botSh
-        .getRange( 1, col )
-        .getNextDataCell( SpreadsheetApp.Direction.DOWN )
-        .getRow();
-    if ( lastRow == 2 ) {
-      inputStage = 'genre';
-    } else if ( lastRow == 3 ) {
-      inputStage = 'tax';
-    } else if ( lastRow == 4 ) {
-      inputStage = 'price';
-    } else if ( lastRow == 5 ) {
-      inputStage = 'detail';
-    } else if ( lastRow == 6 ) {
-      if ( reqType == 'dc_input' ) {
-        reqType = 'conf_dc';
-        inputStage = 'conf_dc';
-      } else if ( reqType == 'al_input' ) {
-        reqType = 'conf_al';
-        inputStage = 'conf_al';
-      }
-    } else {
-      inputStage = flgVal == 'on' ? 'date' : 'key';
-    }
-  }
-  if ( reqType != null ) {
-    console.log( reqType );
-  }
-  if( inputStage != null ) {
-    console.log( inputStage );
-  }
-  return true;
-}
-
-function getInputVal()
-{
-  inputDate = botSh.getRange( dateRowBotSh, dcInputCol ).getValue(); // 日付
-  inputKey = botSh.getRange( keyRowBotSh, alInputCol ).getValue(); // キー
-  let inputColBotSh;
-  if( reqType == 'dc_input' || reqType == 'conf_dc' ) {
-    inputColBotSh = dcInputCol;
-  } else if( reqType == 'al_input' || reqType == 'conf_al' ) {
-    inputColBotSh = alInputCol;
-  } else {
-    return;
-  }
-  inputGenre = botSh.getRange( genreRowBotSh, inputColBotSh ).getValue(); // ジャンル
-  inputTax = botSh.getRange( taxRowBotSh, inputColBotSh ).getValue(); // 税
-  inputMoney = botSh.getRange( moneyRowBotSh, inputColBotSh ).getValue(); // 金額
-  inputDetail = botSh.getRange( detailRowBotSh, inputColBotSh ).getValue(); // 備考
-}
-
-function setMonSh()
-{
-  sheetMonth = inputDate > today ? thisMonth - 1 : thisMonth;
-  sheetName = sheetMonth + "月度";
-}
-
 function buildAlStrMsg( msg )
 {
   msg = msg + '\n\n【登録済みのエイリアス】';
@@ -460,17 +317,18 @@ function buildAlStrMsg( msg )
 function buildGenreItems()
 {
   let items = [];
-  allGenres: for ( let i = 0; i < genres.length; i++ ) {
-    oneGenre: for ( let j = 0; j < genres.length; j++ ) {
-      for ( let k = 0; k < genres[j].length; k++ ) {
+  const categories = listSh.getRawCategoryValues();
+  allGenres: for ( let i = 0; i < categories.length; i++ ) {
+    oneGenre: for ( let j = 0; j < categories.length; j++ ) {
+      for ( let k = 0; k < categories[j].length; k++ ) {
         if ( items.length > 11 ) {
           break allGenres;
         }
-        genre = genres[ j ][ k ];
-        if( !genre ) {
+        category = categories[ j ][ k ];
+        if( !category ) {
           continue oneGenre;
         }
-        items.push( genre );
+        items.push( category );
       }
     }
   }
@@ -494,11 +352,11 @@ function aliasNum( aliases, msg )
 function clearInputs()
 {
   let clearRange;
-  clearRange = botSh.getRange( inputStrRowBotSh, flgInputCol );
+  clearRange = botSh.getFlagCell();
   clearRange.clearContent();
-  clearRange = botSh.getRange( inputStrRowBotSh, dcInputCol, dcItemsNum );
+  clearRange = botSh.getRawDeclarationInputsRange();
   clearRange.clearContent();
-  clearRange = botSh.getRange( inputStrRowBotSh, alInputCol, alItemsNum );
+  clearRange = botSh.gerRawAliasInputsRange();
   clearRange.clearContent();
 }
 
@@ -507,7 +365,8 @@ function clearInputs()
 */
 function addGenres( question )
 {
-  genres.forEach( ( values ) => {
+  const categories = listSh.getRawCategoryValues();
+  categories.forEach( ( values ) => {
     values.forEach( ( value ) => {
       if ( value != "" ) {
         question = question + "・" + value + "\n";
@@ -515,6 +374,35 @@ function addGenres( question )
     } );
   } );
   return question;
+}
+
+function categoryReplayMeta()
+{
+  const funcName = "categoryReplayMeta";
+  const categories = listSh.getRawCategoryValues();
+  const set_categories = new Set( categories.flat() );
+  set_categories.delete( "" );
+  const menu = Array.from( set_categories );
+  if ( debug ) {
+    log( funcName, menu, "menu" );
+  }
+  let categories_short = menu;
+  categories_short.length = 13;
+  const set_categories_short = new Set( categories_short );
+  if ( set_categories_short.has( "" ) ) {
+    set_categories_short.delete( "" );
+  }
+  const items = Array.from( set_categories_short );
+  return { menu: menu, items: items, };
+}
+
+function buildMenu( items )
+{
+  let message = "";
+  items.forEach( ( item ) => {
+    message += "・" + item + "\n";
+  } );
+  return message;
 }
 
 function buildGuideMsg( type )
@@ -532,13 +420,12 @@ function buildGuideMsg( type )
 function buildConfMsg()
 {
   let question = "下記の内容を申告シートへ出力します。よろしいですか？\nよろしければ「はい」と送信してください。\n";
-  const values = botSh.getRange( inputStrRowBotSh, dcLabelCol, dcItemsNum, inputWidthBotSh ).getValues();
+  const values = botSh.getInputValues();
   values.forEach( row => {
-    const label = row[0];
-    let input = row[ userIndex + 1 ];
-
+    const label = row[ 0 ];
+    let input = row[ botSh.currentUser.index + 1 ];
     if ( label == "日付" ) {
-      input = sheetMonth + "月" + input + "日";
+      input = botSh.targetSheet.month  + "月" + input + "日";
     } else if ( label == "金額" ) {
       input = "¥" + input.toLocaleString();
     }
@@ -550,11 +437,11 @@ function buildConfMsg()
 function buildAlConfMsg()
 {
   let question = "下記の内容をエイリアスとして登録します。よろしいですか？\nよろしければ「はい」と送信してください。\n";
-  var values = botSh.getRange( keyRowBotSh, alLabelCol, alItemsNum - 1, inputWidthBotSh ).getValues();
+  var values = botSh.sheet.getRange( botSh.alias.rows.keyInput, botSh.alias.cols.labelInput, botSh.alias.rows.num - 1, botSh.input.cols.numOnePart ).getValues();
   console.log( values );
   values.forEach( row => {
     const label = row[ 0 ]; // ラベルを取得
-    let input = row[ userIndex + 1 ];
+    let input = row[ botSh.currentUser.index + 1 ];
     if ( input == "blank" ) {
       input = "";
     } else if ( label == "金額" ) {
@@ -570,8 +457,9 @@ function buildAlConfMsg()
 */
 function validateGenre( msg )
 {
-  for ( let i = 0; i < genres.length; i++ ) {
-    if ( genres[ i ].indexOf( msg ) >= 0 ) {
+  const categories = listSh.getRawCategoryValues();
+  for ( let i = 0; i < categories.length; i++ ) {
+    if ( categories[ i ].indexOf( msg ) >= 0 ) {
       return msg;
     }
   }
@@ -585,19 +473,19 @@ function validateDate( msg )
 {
   if( isNaN( msg ) ) {
     if ( msg == "今日" ) {
-      return today;
+      return dateNow;
     } else if ( msg == "昨日" ) {
-      if ( today - 1 < 1 ) {
-        return prevMonthLastDay;
+      if ( dateNow - 1 < 1 ) {
+        return lastDatePrevMonth;
       }
-      return today - 1;
+      return dateNow - 1;
     } else if ( msg == "一昨日" ) {
-      if ( today - 2 < 0 ) {
-        return prevMonthLastDay - 1;
-      } else if ( today - 2 == 0 ) {
-        return prevMonthLastDay;
+      if ( dateNow - 2 < 0 ) {
+        return lastDatePrevMonth - 1;
+      } else if ( dateNow - 2 == 0 ) {
+        return lastDatePrevMonth;
       }
-      return today - 2;
+      return dateNow - 2;
     } else if ( !isNaN( Number( msg.replace( '日', '' ) ) ) ) {
       return Number( msg.replace( '日', '' ) );
     }
@@ -606,11 +494,11 @@ function validateDate( msg )
   return msg;
 }
 
-function buildInputs( date, genre, user, taxCol, value, detail )
+function buildInputs( date, category, user, taxCol, value, detail )
 {
   return {
     'date' : date,
-    'genre' : genre,
+    'category' : category,
     'user' : user,
     'taxCol' : taxCol,
     'value' : value,
@@ -618,53 +506,15 @@ function buildInputs( date, genre, user, taxCol, value, detail )
   };
 }
 
-function buildAliasInputs( key, genre, tax, val, detail )
+function buildAliasInputs( key, category, tax, val, detail )
 {
   return {
     'key' : key,
-    'genre' : genre,
+    'category' : category,
     'tax' : tax,
     'val' : val,
     'detail' : detail,
   };
-}
-
-/*
-* 申告内容を申告シートへの出力
-*/
-function inputsToMonthSh( inputs )
-{
-  let targetRow;
-  const targetSheet = thisYearBook.getSheetByName( sheetName );
-  const row2Val = targetSheet.getRange( 2, dateColMonSh ).getValue();
-  if ( row2Val == '' ) {
-    targetRow = 2;
-  } else {
-    targetRow =
-      targetSheet
-        .getRange( 1, 1 )
-        .getNextDataCell( SpreadsheetApp.Direction.DOWN )
-        .getRow()
-      + 1;
-  }
-  targetSheet
-    .getRange( targetRow, dateColMonSh )
-    .setValue( inputs[ 'date' ] );
-  targetSheet
-    .getRange( targetRow, genreColMonSh )
-    .setValue( inputs[ 'genre' ] );
-  targetSheet
-    .getRange( targetRow, userColMonSh )
-    .setValue( inputs[ 'user' ] );
-  targetSheet
-    .getRange( targetRow, inputs[ 'taxCol' ] )
-    .setValue( inputs[ 'value' ] );
-  targetSheet
-    .getRange( targetRow, detailColMonSh )
-    .setValue( inputs[ 'detail' ] );
-  console.log( "申告シート入力完了" );
-  calcTax( targetSheet ); // 税込み金額を計算し出力
-  sort( targetSheet ) // 日付順に並び替え
 }
 
 function inputsToAliase( inputs )
@@ -675,7 +525,7 @@ function inputsToAliase( inputs )
       .getRow()
     + 1;
   aliasSh.getRange( targetRow, 1 ).setValue( inputs[ 'key' ] );
-  aliasSh.getRange( targetRow, 2 ).setValue( inputs[ 'genre' ] );
+  aliasSh.getRange( targetRow, 2 ).setValue( inputs[ 'category' ] );
   aliasSh.getRange( targetRow, 3 ).setValue( inputs[ 'tax' ] );
   aliasSh.getRange( targetRow, 4 ).setValue( inputs[ 'val' ] );
   aliasSh.getRange( targetRow, 5 ).setValue( inputs[ 'detail' ] );
@@ -687,6 +537,7 @@ function inputsToAliase( inputs )
 */
 function reply( token, msg )
 {
+  const funcName = "reply";
   // 受信したメッセージをそのまま送信
   const msgJson = {
     "replyToken": token,
@@ -708,15 +559,27 @@ function reply( token, msg )
     "muteHttpExceptions" : true,
   };
   // JSON形式でAPIにポスト
-  UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/reply", replyData );
+  try {
+    const response = UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/reply", replyData );
+    if ( debug ) {
+      log( funcName, msg, "msg" );
+      log( funcName, items, "items" );
+    }
+    log( funcName, "Response: " + funcName + " has fired.", "", { type : "info" } );
+    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
+    if ( debug ) {
+      log( funcName, response.getContentText(), "response text" );
+    }
+  } catch( e ) {
+    log( funcName, e, "error", { type : "error" } );
+  }
 }
 
 function quickReply( token, msg, items )
 {
+  const funcName = "quickReply";
   let items_json = [];
-
-  items.forEach( function( item )
-  {
+  items.forEach( ( item ) => {
     let item_json = {
       "type": "action",
       "action": {
@@ -727,7 +590,6 @@ function quickReply( token, msg, items )
     };
     items_json.push( item_json );
   } );
-
   const msgJson = {
     "replyToken": token,
     "messages": [
@@ -741,7 +603,6 @@ function quickReply( token, msg, items )
     ],
     "notificationDisabled": true,
   };
-
   const replyData = {
     "method": "post",
     "headers": {
@@ -751,17 +612,25 @@ function quickReply( token, msg, items )
     "payload": JSON.stringify( msgJson ),
     "muteHttpExceptions" : true,
   };
-
   try {
-    UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/reply", replyData );
-    console.log( "Response: QuickReply has fired." );
+    const response = UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/reply", replyData );
+    if ( debug ) {
+      log( funcName, msg, "msg" );
+      log( funcName, items, "items" );
+    }
+    log( funcName, "Response: " + funcName + " has fired.", "", { type : "info" } );
+    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
+    if ( debug ) {
+      log( funcName, response.getContentText(), "response text" );
+    }
   } catch( e ) {
-    console.log( "QuickReply error: " + e );
+    log( funcName, e, "error", { type : "error" } );
   }
 }
 
-function sendMsg( uid, msg )
+function sendMessage( uid, msg )
 {
+  const funcName = "sendMessage";
   // 受信したメッセージをそのまま送信
   const msgJson = {
     'to' : uid,
@@ -782,11 +651,30 @@ function sendMsg( uid, msg )
     "payload": JSON.stringify( msgJson ),
     "muteHttpExceptions" : true,
   };
-
   try {
-    UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/push", replyData );
-    console.log( "SendMsg function has fired." );
+    const response = UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/push", replyData );
+    if ( debug ) {
+      log( funcName, msg, "msg" );
+      log( funcName, items, "items" );
+    }
+    log( funcName, "Response: " + funcName + " has fired.", "", { type : "info" } );
+    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
+    if ( debug ) {
+      log( funcName, response.getContentText(), "response text" );
+    }
   } catch( e ) {
-    console.log( "SendMsg function error: " + e );
+    log( funcName, e, "error", { type : "error" } );
   }
+}
+
+function isReserved( message )
+{
+  if (
+    message == "キッチン" || message == "申告" || message == "エイリアス" ||
+    message == "トイレ掃除" || message == "お風呂掃除" || message == "洗濯物" ||
+    message == "はい" || message == "blank" || message == "中止"
+  ) {
+    return true;
+  }
+  return false;
 }

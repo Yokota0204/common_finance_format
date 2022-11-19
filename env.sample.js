@@ -1,12 +1,12 @@
 const debug = false;
 
 // 年ごとにシートのidを変更。
-const thisYearBook = SpreadsheetApp.openById( '' );
+const thisSs = SpreadsheetApp.openById( 'SPREAD SHEET ID' );
 
 /*
  * Messaging APIのチャネルアクセストークン
  */
-const CHANNEL_ACCESS_TOKEN = "";
+const CHANNEL_ACCESS_TOKEN = "LINE MESSAGING API CHANNEL ACCESS TOKEN";
 
 // LINE notify用トークン
-const notify_token = debug ? "" : ""; // 本番用
+const notify_token = debug ? "LINE NOTIFY TOKEN FOR TEST" : "LINE NOTIFY TOKEN FOR PRODUCTION";

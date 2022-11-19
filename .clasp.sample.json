@@ -1,13 +1,13 @@
 {
-  "scriptId":"",
-  "rootDir":"/Users/yohei-yokota/gas_projects/common_finance_format",
+  "scriptId":"SCRIPT ID",
+  "rootDir":"/Users/APP_PATH",
   "filePushOrder": [
-    "/Users/yohei-yokota/gas_projects/common_finance_format/env.js",
-    "/Users/yohei-yokota/gas_projects/common_finance_format/class.js",
-    "/Users/yohei-yokota/gas_projects/common_finance_format/global.js",
-    "/Users/yohei-yokota/gas_projects/common_finance_format/line_bot.js",
-    "/Users/yohei-yokota/gas_projects/common_finance_format/monthly.js",
-    "/Users/yohei-yokota/gas_projects/common_finance_format/code.js",
-    "/Users/yohei-yokota/gas_projects/common_finance_format/debug.js"
+    "/Users/APP_PATH/env.js",
+    "/Users/APP_PATH/class.js",
+    "/Users/APP_PATH/global.js",
+    "/Users/APP_PATH/line_bot.js",
+    "/Users/APP_PATH/monthly.js",
+    "/Users/APP_PATH/code.js",
+    "/Users/APP_PATH/debug.js"
   ]
 }
