@@ -16,47 +16,54 @@ function isNumber( num )
 //sort by date method
 function sort( sheet = activeSh )
 {
-  var range = sheet.getRange( 2, 1 );
-  var lastRowA = range.getNextDataCell( SpreadsheetApp.Direction.DOWN ).getRow() - 1;
-  var sortRange = sheet.getRange( 2, 1, lastRowA, 8 );
-  // sort by date
+  const range = sheet.getRange( 2, 1 );
+  const lastRowA = range.getNextDataCell( SpreadsheetApp.Direction.DOWN ).getRow() - 1;
+  const sortRange = sheet.getRange( 2, 1, lastRowA, 8 );
   sortRange.sort( [ { column: 1, ascending: true } ] );
-
-  calcTax();
+  calcTax( sheet );
 }
 
 function calcTax( sheet = activeSh )
 {
   const funcName = "calcTax";
-  const sheetName = sheet.getSheetName();
   if ( debug ) {
-    console.log( `[DEBUG: ${ funcName }] sheetName: ${ sheetName }` );
+    log( funcName, sheet.getSheetName(), "sheet.getSheetName()" );
   }
-  const monthSh = new MonthSheet( sheetName );
-  const calcRange = monthSh.getPriceRange();
+  const lastRow = sheet
+    .getRange( formatSh.consumption.rows.firstInput, formatSh.consumption.cols.firstInput )
+    .getNextDataCell( SpreadsheetApp.Direction.DOWN )
+    .getRow();
+  const colNum = formatSh.consumption.numbers.priceCols ?? formatSh.getConsumptionPriceColsNum();
+  const calcRange = sheet.getRange(
+    formatSh.consumption.rows.firstInput,
+    formatSh.consumption.cols.firstPriceInput,
+    lastRow - 1,
+    colNum
+  );
   let calcValues = calcRange.getValues();
   if ( debug ) {
-    console.log( `[DEBUG ${ funcName }] calcValues ↓` );
-    console.log( calcValues );
+    log( funcName, calcValues, "calcValues" );
   }
-  for( let i = 0; i < calcValues.length; i++ ) {
-    var setValue = 0;
+  for ( let i = 0; i < calcValues.length; i++ ) {
     if ( calcValues[ i ][ 0 ] != "-" && calcValues[ i ][ 0 ] != "" ) {
-      setValue = Math.round( calcValues[ i ][ 0 ] * 1.1 );
+      calcValues[ i ][ 3 ] = Math.round( calcValues[ i ][ 0 ] * 1.1 );
     } else if ( calcValues[ i ][ 1 ] != "-" && calcValues[ i ][ 1 ] != "" ) {
-      setValue = Math.round( calcValues[ i ][ 1 ] * 1.08 );
+      calcValues[ i ][ 3 ] = Math.round( calcValues[ i ][ 1 ] * 1.08 );
     } else if ( calcValues[ i ][ 2 ] != "-" && calcValues[ i ][ 2 ] != "" ) {
-      setValue = calcValues[ i ][ 2 ];
+      calcValues[ i ][ 3 ] = calcValues[ i ][ 2 ];
     } else {
-      setValue = "";
+      calcValues[ i ][ 3 ] = "";
     }
-    calcValues[ i ][ 3 ] = setValue;
   }
   if ( debug ) {
-    console.log( `[DEBUG ${ funcName }] calcValues ↓` );
-    console.log( calcValues );
+    log( funcName, calcValues, "calcValues" );
   }
-  calcRange.setValues( calcValues );
+  sheet.getRange(
+    formatSh.consumption.rows.firstInput,
+    formatSh.consumption.cols.firstPriceInput,
+    calcValues.length,
+    colNum
+  ).setValues( calcValues );
   // Tax function doesn't include Math.ceil(). So slightly the output is defferent.
 }
 
@@ -113,4 +120,9 @@ function monthSheetName( month )
 function isObject( value )
 {
   return value !== null && typeof value === 'object'
+}
+
+function isEmptyObject( object )
+{
+  return !Object.keys( object ).length;;
 }

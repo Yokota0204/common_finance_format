@@ -601,12 +601,6 @@ class FormatSheet extends SheetInfo {
     this.consumption = template();
     this.consumption.cols.firstInput = 1;
     this.consumption.cols.dateInput = 1;
-    this.consumption.rows.labelInput = 1;
-    this.consumption.rows.firstInput = 2;
-  }
-
-  getConsumptionCols() {
-    const funcName = `${ this.className }.getConsumptionCols`;
     this.consumption.cols.categoryInput = this.consumption.cols.dateInput + 1;
     this.consumption.cols.userInput = this.consumption.cols.categoryInput + 1;
     this.consumption.cols.tax10Input = this.consumption.cols.userInput + 1;
@@ -618,6 +612,12 @@ class FormatSheet extends SheetInfo {
     this.consumption.cols.firstPriceInput = this.consumption.cols.tax10Input;
     this.consumption.cols.lastPriceInput = this.consumption.cols.priceInput;
     this.consumption.cols.num = this.consumption.cols.lastInput - this.consumption.cols.firstInput + 1;
+    this.consumption.rows.labelInput = 1;
+    this.consumption.rows.firstInput = 2;
+  }
+
+  getConsumptionCols() {
+    const funcName = `${ this.className }.getConsumptionCols`;
     if ( debug ) {
       console.log( `[DEBUG: ${ funcName }] this.consumption.cols ↓` );
       console.log( this.consumption.cols );
@@ -729,8 +729,8 @@ class MonthSheet extends FormatSheet {
     }
     targetRange.setValues( inputs );
     log( funcName, "申告シート入力完了", "", { type: "info" } );
-    calcTax( this.sheet ); // 税込み金額を計算し出力
     sort( this.sheet ) // 日付順に並び替え
+    calcTax( this.sheet );
   }
 }
 

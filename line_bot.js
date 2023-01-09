@@ -531,21 +531,12 @@ function reply( token, msg )
     ]
   };
   // 送信のための諸準備
-  const replyData = {
-    "method": "post",
-    "headers": {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + CHANNEL_ACCESS_TOKEN
-    },
-    "payload": JSON.stringify(msgJson),
-    "muteHttpExceptions" : true,
-  };
+  const replyData = optionsRequest( "post", msgJson, "application/json" );
   // JSON形式でAPIにポスト
   try {
-    const response = UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/reply", replyData );
+    const response = UrlFetchApp.fetch( URL_REPLY_API, replyData );
     if ( debug ) {
       log( funcName, msg, "msg" );
-      log( funcName, items, "items" );
     }
     log( funcName, "Response: " + funcName + " has fired.", "", { type : "info" } );
     log( funcName, response.getResponseCode(), "response code", { type : "info" } );
@@ -553,13 +544,17 @@ function reply( token, msg )
       log( funcName, response.getContentText(), "response text" );
     }
   } catch( e ) {
-    log( funcName, e, "error", { type : "error" } );
+    throw buildLogLabel( funcName, "error" ) + e;
   }
 }
 
 function quickReply( token, msg, items )
 {
   const funcName = "quickReply";
+  if ( debug ) {
+    log( funcName, msg, { label: "msg", } );
+    log( funcName, items, { label: "items", } );
+  }
   let items_json = [];
   items.forEach( ( item ) => {
     let item_json = {
@@ -585,66 +580,39 @@ function quickReply( token, msg, items )
     ],
     "notificationDisabled": true,
   };
-  const replyData = {
-    "method": "post",
-    "headers": {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + CHANNEL_ACCESS_TOKEN
-    },
-    "payload": JSON.stringify( msgJson ),
-    "muteHttpExceptions" : true,
-  };
+  const replyData = optionsRequest( "post", msgJson, "application/json" );
   try {
-    const response = UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/reply", replyData );
-    if ( debug ) {
-      log( funcName, msg, "msg" );
-      log( funcName, items, "items" );
-    }
-    log( funcName, "Response: " + funcName + " has fired.", "", { type : "info" } );
+    const response = UrlFetchApp.fetch( URL_REPLY_API, replyData );
     log( funcName, response.getResponseCode(), "response code", { type : "info" } );
     if ( debug ) {
       log( funcName, response.getContentText(), "response text" );
     }
   } catch( e ) {
-    log( funcName, e, "error", { type : "error" } );
+    throw buildLogLabel( funcName, "error" ) + e;
   }
 }
 
 function sendMessage( uid, msg )
 {
   const funcName = "sendMessage";
+  if ( debug ) {
+    log( funcName, msg, { label: "msg", } );
+  }
   // 受信したメッセージをそのまま送信
   const msgJson = {
     'to' : uid,
-    "messages": [
-      {
-        "type": "text",
-        "text": msg
-      }
-    ]
+    "messages": [ { "type": "text", "text": msg }, ],
   };
   // 送信のための諸準備
-  const replyData = {
-    "method": "post",
-    "headers": {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + CHANNEL_ACCESS_TOKEN
-    },
-    "payload": JSON.stringify( msgJson ),
-    "muteHttpExceptions" : true,
-  };
+  const replyData = optionsRequest( "post", msgJson, "application/json" );
   try {
-    const response = UrlFetchApp.fetch( "https://api.line.me/v2/bot/message/push", replyData );
-    if ( debug ) {
-      log( funcName, msg, "msg" );
-    }
-    log( funcName, "Response: " + funcName + " has fired.", "", { type : "info" } );
+    const response = UrlFetchApp.fetch( URL_LINE_BOT_API + "message/push", replyData );
     log( funcName, response.getResponseCode(), "response code", { type : "info" } );
     if ( debug ) {
       log( funcName, response.getContentText(), "response text" );
     }
   } catch( e ) {
-    log( funcName, e, "error", { type : "error" } );
+    throw buildLogLabel( funcName, "error" ) + e;
   }
 }
 
