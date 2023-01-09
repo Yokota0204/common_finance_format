@@ -42,7 +42,7 @@ function calcTax( sheet = activeSh )
   );
   let calcValues = calcRange.getValues();
   if ( debug ) {
-    log( funcName, calcValues, "calcValues" );
+    log( funcName, calcValues, { label: "calcValues", } );
   }
   for ( let i = 0; i < calcValues.length; i++ ) {
     if ( calcValues[ i ][ 0 ] != "-" && calcValues[ i ][ 0 ] != "" ) {
@@ -56,7 +56,7 @@ function calcTax( sheet = activeSh )
     }
   }
   if ( debug ) {
-    log( funcName, calcValues, "calcValues" );
+    log( funcName, calcValues, { label: "calcValues", } );
   }
   sheet.getRange(
     formatSh.consumption.rows.firstInput,
