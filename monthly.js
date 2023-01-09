@@ -129,12 +129,12 @@ function notify_result()
   message = message + "陽平： " + half_sum_str + " - " + reward_yohei_str + " = " + pay_yohei_str + "円" + u_nl + u_nl + u_nl;
   message = message + "◯ まとめ" + u_nl;
   const fixedPayment = [
-    {
-      name: '野菜カット代',
-      label: 'cutVeg',
-      fee: 3000,
-      owe: 'yohei',
-    },
+    // {
+    //   name: '野菜カット代',
+    //   label: 'cutVeg',
+    //   fee: 3000,
+    //   owe: 'yohei',
+    // },
     {
       name: '借金返済',
       label: 'dept',
