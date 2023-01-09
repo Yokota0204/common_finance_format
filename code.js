@@ -121,3 +121,8 @@ function isObject( value )
 {
   return value !== null && typeof value === 'object'
 }
+
+function isEmptyObject( object )
+{
+  return !Object.keys( object ).length;;
+}

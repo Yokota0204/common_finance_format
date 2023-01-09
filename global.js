@@ -83,3 +83,183 @@ const strGuide = strGuideString;
 
 // Utility
 const u_nl = "\n";
+
+const URL_LINE_BOT_API = "https://api.line.me/v2/bot/";
+const URL_REPLY_API = URL_LINE_BOT_API + "message/reply";
+const URL_RICHMENU_API = URL_LINE_BOT_API + 'richmenu/';
+const URL_CHECK_RICHMENU_API = URL_RICHMENU_API + "validate";
+const URL_RICHMENU_ALIAS_API = URL_RICHMENU_API + "alias/";
+const URL_RICHMENU_DATA_API = 'https://api-data.line.me/v2/bot/richmenu/';
+const URL_RICHMENU_DEFAULT_API = URL_LINE_BOT_API + "user/all/richmenu/";
+
+const tasksRichMenu = {
+  'size': {
+    'width': 2500,
+    'height': 1563,
+  },
+  'selected': true,
+  'name': "others-menu",
+  'chatBarText': "メニュー",
+  'areas': [
+    {
+      'bounds': {
+        'x': 19,
+        'y': 20,
+        'width': 1216,
+        'height': 193,
+      },
+      'action': {
+        'type': 'richmenuswitch',
+        'richMenuAliasId' : "tasks-menu",
+        "data" : "switch-tasks-tab",
+      },
+    },
+    {
+      'bounds': {
+        'x': 1265,
+        'y': 20,
+        'width': 1216,
+        'height': 193,
+      },
+      'action': {
+        'type': 'richmenuswitch',
+        'richMenuAliasId' : "others-menu",
+        "data" : "switch-others-tab",
+      },
+    },
+    {
+      'bounds': {
+        'x': 0,
+        'y': 213,
+        'width': 1250,
+        'height': 510,
+      },
+      'action': {
+        'type': 'message',
+        'text': 'トイレ掃除',
+      },
+    },
+    {
+      'bounds': {
+        'x': 1250,
+        'y': 213,
+        'width': 1250,
+        'height': 510,
+      },
+      'action': {
+        'type': 'message',
+        'text': 'キッチン',
+      },
+    },
+    {
+      'bounds': {
+        'x': 0,
+        'y': 213 + 510,
+        'width': 1250,
+        'height': 510,
+      },
+      'action': {
+        'type': 'message',
+        'text': 'お風呂掃除',
+      },
+    },
+    {
+      'bounds': {
+        'x': 1250,
+        'y': 213 + 510,
+        'width': 1250,
+        'height': 510,
+      },
+      'action': {
+        'type': 'message',
+        'text': '洗濯',
+      },
+    },
+    {
+      'bounds': {
+        'x': 0,
+        'y': 213 + 510 * 2,
+        'width': 2500,
+        'height': 326,
+      },
+      'action': {
+        'type': 'message',
+        'text': '複数入力',
+      },
+    },
+  ],
+};
+
+const othersRichMenu = {
+  'size': {
+    'width': 2500,
+    'height': 1563,
+  },
+  'selected': false,
+  'name': "others-menu",
+  'chatBarText': "メニュー",
+  'areas': [
+    {
+      'bounds': {
+        'x': 19,
+        'y': 20,
+        'width': 1216,
+        'height': 193,
+      },
+      'action': {
+        'type': 'richmenuswitch',
+        'richMenuAliasId' : "tasks-menu",
+        "data" : "switch-tasks-tab",
+      },
+    },
+    {
+      'bounds': {
+        'x': 1265,
+        'y': 20,
+        'width': 1216,
+        'height': 193,
+      },
+      'action': {
+        'type': 'richmenuswitch',
+        'richMenuAliasId' : "others-menu",
+        "data" : "switch-others-tab",
+      },
+    },
+    {
+      'bounds': {
+        'x': 0,
+        'y': 213,
+        'width': 1250,
+        'height': 912,
+      },
+      'action': {
+        'type': 'message',
+        'text': '申告',
+      },
+    },
+    {
+      'bounds': {
+        'x': 1250,
+        'y': 213,
+        'width': 1250,
+        'height': 912,
+      },
+      'action': {
+        'type': 'message',
+        'text': '中止',
+      },
+    },
+    {
+      'bounds': {
+        'x': 0,
+        'y': 213 + 912,
+        'width': 2500,
+        'height': 438,
+      },
+      'action': {
+        'type': 'message',
+        'text': 'テンプレ入力',
+      },
+    },
+  ],
+};
