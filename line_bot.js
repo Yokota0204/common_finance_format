@@ -16,9 +16,7 @@ function doPost( e )
   // リクエストイベントの取得
   const events = JSON.parse( e.postData.contents ).events;
   const event = events[ 0 ];
-  if ( debug ) {
-    log( funcName, event, { label: "event" } );
-  }
+  log( funcName, event, { label: "event" } );
   const token = event.replyToken;
   const msg = event.message.text;
   const uid = event.source.userId;
@@ -298,13 +296,9 @@ function putWork( msg, type ) {
       msg,
     ],
   ];
-  if ( debug ) {
-    log( funcName, inputs, { label: "inputs", } );
-  }
+  log( funcName, inputs, { label: "inputs", } );
   const sheetName = botSh.targetSheet.sheetName;
-  if ( debug ) {
-    log( funcName, sheetName, { label: "sheetName", } );
-  }
+  log( funcName, sheetName, { label: "sheetName", } );
   const multiInputFlag = botSh.flag.values.multiInput ?? botSh.multiInputFlagValue();
   const multiInputNum = botSh.flag.values.multiInputNum ?? botSh.multiInputNumValue();
   let number = 1;
@@ -415,9 +409,7 @@ function categoryReplayMeta()
   const set_categories = new Set( categories.flat() );
   set_categories.delete( "" );
   const menu = Array.from( set_categories );
-  if ( debug ) {
-    log( funcName, menu, { label: "menu", } );
-  }
+  log( funcName, menu, { label: "menu", } );
   let categories_short = menu;
   categories_short.length = 13;
   const set_categories_short = new Set( categories_short );
@@ -570,14 +562,9 @@ function reply( token, msg )
   // JSON形式でAPIにポスト
   try {
     const response = UrlFetchApp.fetch( URL_REPLY_API, replyData );
-    if ( debug ) {
-      log( funcName, msg, "msg" );
-    }
-    log( funcName, "Response: " + funcName + " has fired.", "", { type : "info" } );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    log( funcName, msg, { label: "msg", } );
+    log( funcName, response.getResponseCode(), { type : "info", label: "response code", } );
+    log( funcName, response.getContentText(), { label: "response text", } );
   } catch( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
   }
@@ -586,10 +573,8 @@ function reply( token, msg )
 function quickReply( token, msg, items )
 {
   const funcName = "quickReply";
-  if ( debug ) {
-    log( funcName, msg, { label: "msg", } );
-    log( funcName, items, { label: "items", } );
-  }
+  log( funcName, msg, { label: "msg", } );
+  log( funcName, items, { label: "items", } );
   let items_json = [];
   items.forEach( ( item ) => {
     let item_json = {
@@ -618,10 +603,8 @@ function quickReply( token, msg, items )
   const replyData = optionsRequest( "post", msgJson, "application/json" );
   try {
     const response = UrlFetchApp.fetch( URL_REPLY_API, replyData );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    log( funcName, response.getResponseCode(), { label: "response code", type : "info" } );
+    log( funcName, response.getContentText(), { label: "response text", } );
   } catch( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
   }
@@ -630,9 +613,7 @@ function quickReply( token, msg, items )
 function sendMessage( uid, msg )
 {
   const funcName = "sendMessage";
-  if ( debug ) {
-    log( funcName, msg, { label: "msg", } );
-  }
+  log( funcName, msg, { label: "msg", } );
   // 受信したメッセージをそのまま送信
   const msgJson = {
     'to' : uid,
@@ -642,10 +623,8 @@ function sendMessage( uid, msg )
   const replyData = optionsRequest( "post", msgJson, "application/json" );
   try {
     const response = UrlFetchApp.fetch( URL_LINE_BOT_API + "message/push", replyData );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    log( funcName, response.getResponseCode(), { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", } );
   } catch( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
   }

@@ -41,9 +41,7 @@ function calcTax( sheet = activeSh )
     colNum
   );
   let calcValues = calcRange.getValues();
-  if ( debug ) {
-    log( funcName, calcValues, { label: "calcValues", } );
-  }
+  log( funcName, calcValues, { label: "calcValues", } );
   for ( let i = 0; i < calcValues.length; i++ ) {
     if ( calcValues[ i ][ 0 ] != "-" && calcValues[ i ][ 0 ] != "" ) {
       calcValues[ i ][ 3 ] = Math.round( calcValues[ i ][ 0 ] * 1.1 );
@@ -55,9 +53,7 @@ function calcTax( sheet = activeSh )
       calcValues[ i ][ 3 ] = "";
     }
   }
-  if ( debug ) {
-    log( funcName, calcValues, { label: "calcValues", } );
-  }
+  log( funcName, calcValues, { label: "calcValues", } );
   sheet.getRange(
     formatSh.consumption.rows.firstInput,
     formatSh.consumption.cols.firstPriceInput,
@@ -83,22 +79,14 @@ function getLastColByRow( sheet, row )
     console.error( `[ERROR: ${ funcName }] row: ${ row }` );
     throw `[ERROR: ${ funcName }] The sheet and row arguments must not be empty.`;
   }
-  if ( debug ) {
-    console.log( `[DEBUG: ${ funcName }] row : ${ row }` );
-    console.log( `[DEBUG: ${ funcName }] sheet.getSheetName : ${ sheet.getSheetName() }` );
-  }
+  log( funcName, row, { label: "row", } );
+  log( funcName, sheet.getSheetName(), { label: "sheet.getSheetName()", } );
   // 指定の行を二次元配列に格納する ※シート全体の最終行までとする
   let rowValues = sheet.getRange( row, 1, 1, sheet.getLastColumn() ).getValues();
-  if ( debug ) {
-    console.log( `[DEBUG: ${ funcName }] rowValues ↓` );
-    console.log( rowValues );
-  }
+  log( funcName, rowValues, { label: "rowValues", } );
   //二次元配列を一次元配列に変換する
   rowValues = Array.prototype.concat.apply( [], rowValues );
-  if ( debug ) {
-    console.log( `[DEBUG: ${ funcName }] rowValues ↓` );
-    console.log( rowValues );
-  }
+  log( funcName, rowValues, { label: "rowValues", } );
   let lastCol = rowValues.filter( val => val != "" ).length;
   return lastCol;
 }
