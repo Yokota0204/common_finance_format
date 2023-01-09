@@ -75,6 +75,7 @@ function log( functionName, value, options = {} )
 
 function buildLogLabel( functionName, type = "debug" )
 {
+  const funcName = "buildLogLabel";
   if ( !functionName ) {
     throw`[ERROR: ${ funcName }] The argument functionName must not be empty.`;
   }
