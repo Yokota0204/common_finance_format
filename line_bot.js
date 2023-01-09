@@ -17,7 +17,7 @@ function doPost( e )
   const events = JSON.parse( e.postData.contents ).events;
   const event = events[ 0 ];
   if ( debug ) {
-    log( funcName, event, "event" );
+    log( funcName, event, { label: "event" } );
   }
   const token = event.replyToken;
   const msg = event.message.text;
@@ -35,8 +35,19 @@ function doPost( e )
   }
   if ( msg == "中止" ) {
     meta = exitInput();
+  } else if ( msg == "テンプレ入力" ) {
+    meta = exitInput();
   } else if ( botSh.requestType == 'start' ) { // 入力なしからの最初のチャット
     meta = flagOn( msg );
+  } else if ( botSh.requestType == "multi" ) {
+    log( funcName, typeof msg, { label: "typeof msg", } );
+    const number = Number( msg );
+    if ( !isNumber( number ) ) {
+      meta = [ "数値を入力してください。", "quick", quickItems.number, ];
+    } else {
+      botSh.putMultiInputNum( number );
+      meta = [ "複数入力する操作を選択してください。", 'quick', quickItems.normal ];
+    }
   } else if( botSh.requestType == 'kc_input' ) { // キッチンの入力中
     meta = putWork( msg, "kitchen" );
   } else if( botSh.requestType == 'ld_input' ) { // 洗濯の入力中
@@ -53,7 +64,8 @@ function doPost( e )
     meta = declare( msg );
   } else if( botSh.requestType == 'conf_al' ) { // エイリアス登録の確認への返信
     meta = registerAlias( msg );
-  } else { // その他
+  }
+  if ( !meta ) {
     clearInputs();
     meta = replyMeta( 'error' );
   }
@@ -66,9 +78,11 @@ function replyMeta( type )
   if ( type == "empty" ) {
     return [ '', 'normal', [] ];
   } else if ( type == "error" ) {
-    return [ `${ botSh.currentUser.hello + strGuide }`, 'quick', quickItems[ "start" ] ];
+    return [ `エラーのため、処理を中断しました。\n${ botSh.currentUser.hello + strGuide }`, 'quick', quickItems[ "start" ] ];
   } else if ( type == "exit" ) {
     return [ `申告を中止しました。${ strGuide }`, 'quick', quickItems[ "start" ] ];
+  } else if ( type == "maintenance" ) {
+    return [ `そのメニューは今準備中です。${ strGuide }`, 'quick', quickItems[ "start" ] ];
   } else if ( type == "date" ) {
     return [ '申告する日付を入力してください。', 'quick', quickItems[ "date" ] ];
   } else if ( type == "key" ) {
@@ -143,6 +157,8 @@ function replyMeta( type )
     return [ botSh.currentUser.hello + buildGuideMsg( "laundry" ), 'quick', quickItems[ "laundry" ] ];
   } else if ( type == "bath" ) {
     return [ botSh.currentUser.hello + "\n「お風呂掃除」を申告しますか？", 'quick', quickItems[ "bath" ] ];
+  } else if ( type == "multiInput" ) {
+    return [ "入力数は何回ですか？", 'quick', quickItems.number ];
   }
   return [ `${ botSh.currentUser.hello + strGuide }`, 'quick', quickItems[ "start" ] ];
 }
@@ -170,119 +186,138 @@ function registerAlias( message )
 function declare( message )
 {
   const funcName = "declare";
-  let meta;
   const values = botSh.getInputRawValues();
-  if ( debug ) {
-    log( funcName, values.tax, "values.tax" );
+  log( funcName, values.tax, { label: "values.tax", } );
+  if ( message != "はい" ) {
+    let tmp = replyMeta( 'conf_dc' );
+    tmp[ 0 ] = buildConfMsg();
+    return tmp;
   }
-  if ( message == "はい" ) {
-    let inputs = [];
-    inputs[ 0 ] = values.date;
-    inputs[ 1 ] = values.category;
-    inputs[ 2 ] = botSh.currentUser.name;
-    inputs[ 3 ] = values.tax == "通常" ? values.price : "-";
-    inputs[ 4 ] = values.tax == "軽減" ? values.price : "-";
-    inputs[ 5 ] = values.tax == "税込" || values.tax == "税込み" ? values.price : "-";
-    inputs[ 6 ] = "";
-    inputs[ 7 ] = values.detail;
-    inputs = [ inputs ];
-    if ( debug ) {
-      log( funcName, inputs, "inputs" );
-    }
-    const monthSh = new MonthSheet( botSh.targetSheet.sheetName );
-    monthSh.putInputs( inputs ); // botシートから申告シートへ出力
-    clearInputs();
-    meta = replyMeta( 'comp_dc' );
-  } else {
-    meta = replyMeta( 'conf_dc' );
-    meta[ 0 ] = buildConfMsg();
+  let inputs = [];
+  inputs[ 0 ] = values.date;
+  inputs[ 1 ] = values.category;
+  inputs[ 2 ] = botSh.currentUser.name;
+  inputs[ 3 ] = values.tax == "通常" ? values.price : "-";
+  inputs[ 4 ] = values.tax == "軽減" ? values.price : "-";
+  inputs[ 5 ] = values.tax == "税込" || values.tax == "税込み" ? values.price : "-";
+  inputs[ 6 ] = "";
+  inputs[ 7 ] = values.detail;
+  inputs = [ inputs ];
+  log( funcName, inputs, { label: "inputs", } );
+  const monthSh = new MonthSheet( botSh.targetSheet.sheetName );
+  const multiInputFlag = botSh.flag.values.multiInput ?? botSh.multiInputFlagValue();
+  const multiInputNum = botSh.flag.values.multiInputNum ?? botSh.multiInputNumValue();
+  let number = 1;
+  if ( multiInputFlag == "on" && multiInputNum ) {
+    number = multiInputNum;
   }
-  return meta;
+  for ( let count_input = 0; count_input < number; count_input++ ) {
+    monthSh.putInputs( inputs );
+  }
+  sort( monthSh.sheet );
+  clearInputs();
+  return [ `${ number }個の申告を完了しました。`, 'normal', [] ];
 }
 
 function flagOn( msg )
 {
   const funcName = "flagOn";
-  let meta;
   const flagCell = botSh.flag.ranges.valueCell;
+  // 通常の申告
   if ( msg == '申告' ) {
-    clearInputs();
     flagCell.setValue( 'on' );
-    meta = replyMeta( 'date' );
+    return replyMeta( 'date' );
   } else if ( msg == 'キッチン' ) {
     flagCell.setValue( "kc" );
-    meta = replyMeta( 'kitchen' );
+    return replyMeta( 'kitchen' );
   } else if ( msg == '洗濯' ) {
     flagCell.setValue( "ld" );
-    meta = replyMeta( 'laundry' );
+    return replyMeta( 'laundry' );
   } else if ( msg == 'トイレ掃除' ) {
     flagCell.setValue( "tl" );
-    meta = replyMeta( 'toilet' );
+    return replyMeta( 'toilet' );
   } else if ( msg == 'お風呂掃除' ) {
     flagCell.setValue( "bt" );
-    meta = replyMeta( 'bath' );
-  } else if ( msg == 'エイリアス' ) {
-    flagCell.setValue( "al" );
-    meta = replyMeta( 'key' );
-    meta[ 0 ] = buildAlStrMsg( meta[ 0 ] );
-  } else {
-    const values = aliasSh.getRawAliases();
-    alIndex = aliasNum( values, msg );
-    if( alIndex === false ) {
-      return replyMeta( 'error' );
-    }
-    log( funcName, "Alias number " + alIndex + " called.", "", { type : "info" } );
-    let inputs = [
-      [ '' ],
-      [ values[ alIndex ][ 1 ] ],
-      [ values[ alIndex ][ 2 ] ],
-      [ values[ alIndex ][ 3 ] ],
-      [ values[ alIndex ][ 4 ] ],
-    ];
-    if ( debug ) {
-      log( funcName, inputs, "inputs" );
-    }
-    flagCell.setValue( 'on' );
-    botSh.getRawDeclarationInputsRange().setValues( inputs );
-    meta = replyMeta( 'date' );
+    return replyMeta( 'bath' );
   }
-  return meta;
+  // エイリアス作成時
+  const multiInputFlagValue = botSh.flag.values.multiInput ?? botSh.multiInputFlagValue();
+  if ( msg == 'エイリアス' && multiInputFlagValue != "on" ) {
+    flagCell.setValue( "al" );
+    let tmp = replyMeta( 'key' );
+    tmp[ 0 ] = buildAlStrMsg( tmp[ 0 ] );
+    return tmp;
+  } else if ( msg == "エイリアス" ) {
+    return [ "エイリアスは複数入力できません。\n複数入力する操作を選択してください。", 'quick', quickItems.normal, ];
+  }
+  // 複数入力時
+  if ( msg == "複数入力" && multiInputFlagValue != "on" ) {
+    const multiInputFlagCellRange = botSh.flag.ranges.multiInput ?? botSh.multiInputFlagCellRange();
+    multiInputFlagCellRange.setValue( "on" );
+    return replyMeta( "multiInput" );
+  } else if ( msg == "複数入力" ) {
+    return [ "複数入力する操作を選択してください。", 'quick', quickItems.normal, ];
+  }
+  // それ以外のとき（エイリアスの検索）
+  const values = aliasSh.getRawAliases();
+  alIndex = aliasNum( values, msg );
+  if ( alIndex === false ) {
+    return replyMeta( 'error' );
+  }
+  log( funcName, "Alias number " + alIndex + " called.", "", { type : "info" } );
+  let inputs = [
+    [ '' ],
+    [ values[ alIndex ][ 1 ] ],
+    [ values[ alIndex ][ 2 ] ],
+    [ values[ alIndex ][ 3 ] ],
+    [ values[ alIndex ][ 4 ] ],
+  ];
+  log( funcName, inputs, { label: "inputs", } );
+  flagCell.setValue( 'on' );
+  botSh.getRawDeclarationInputsRange().setValues( inputs );
+  return replyMeta( 'date' );
 }
 
 function putWork( msg, type ) {
   const funcName = "putWork";
-  let meta;
   const taskVal = tasks[ type ];
   let val = taskVal ? taskVal[ msg ] : false;
   const items = quickItems[ type ];
-  if ( val ) {
-    const inputs = [
-      [
-        dateNow,
-        taskVal.name,
-        botSh.currentUser.name,
-        "-",
-        "-",
-        val,
-        "",
-        msg,
-      ],
-    ];
-    if ( debug ) {
-      log( funcName, inputs, "inputs" );
-    }
-    const sheetName = botSh.targetSheet.sheetName;
-    if ( debug ) {
-      log( funcName, sheetName, "sheetName" );
-    }
-    const monthSh = new MonthSheet( sheetName );
-    monthSh.putInputs( inputs );
-    clearInputs();
-    meta = [ taskVal.name + "の「" + msg + "」を申告しました。", 'normal', [] ];
-  } else {
-    meta = [ "入力が間違っています。" + buildGuideMsg( type ), 'quick', items ];
+  if ( !val ) {
+    return [ "入力が間違っています。" + buildGuideMsg( type ), 'quick', items ];
   }
-  return meta;
+  const inputs = [
+    [
+      dateNow,
+      taskVal.name,
+      botSh.currentUser.name,
+      "-",
+      "-",
+      val,
+      "",
+      msg,
+    ],
+  ];
+  if ( debug ) {
+    log( funcName, inputs, { label: "inputs", } );
+  }
+  const sheetName = botSh.targetSheet.sheetName;
+  if ( debug ) {
+    log( funcName, sheetName, { label: "sheetName", } );
+  }
+  const multiInputFlag = botSh.flag.values.multiInput ?? botSh.multiInputFlagValue();
+  const multiInputNum = botSh.flag.values.multiInputNum ?? botSh.multiInputNumValue();
+  let number = 1;
+  if ( multiInputFlag == "on" && multiInputNum ) {
+    number = multiInputNum;
+  }
+  const monthSh = new MonthSheet( sheetName );
+  for ( let count_input = 0; count_input < number; count_input++ ) {
+    monthSh.putInputs( inputs );
+  }
+  sort( monthSh.sheet );
+  clearInputs();
+  return [ taskVal.name + "の「" + msg + "」を" + number + "つ申告しました。", 'normal', [] ];
 }
 
 function doReply( token, msg, type, arr )
@@ -349,7 +384,7 @@ function aliasNum( aliases, msg )
 function clearInputs()
 {
   let clearRange;
-  clearRange = botSh.getFlagCell();
+  clearRange = botSh.allFlagCellsRange();
   clearRange.clearContent();
   clearRange = botSh.getRawDeclarationInputsRange();
   clearRange.clearContent();
@@ -381,7 +416,7 @@ function categoryReplayMeta()
   set_categories.delete( "" );
   const menu = Array.from( set_categories );
   if ( debug ) {
-    log( funcName, menu, "menu" );
+    log( funcName, menu, { label: "menu", } );
   }
   let categories_short = menu;
   categories_short.length = 13;

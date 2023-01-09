@@ -176,8 +176,11 @@ class BotSheet extends SheetInfo {
     this.flag.cols.labelInput = 1;
     this.flag.cols.firstInput = 2;
     this.flag.rows.firstInput = 2;
-    this.flag.rows.flagInput = 2;
-    this.flag.rows.lastInput = 2;
+    this.flag.rows.flagInput = this.flag.rows.firstInput;
+    this.flag.rows.multiInput = this.flag.rows.flagInput + 1;
+    this.flag.rows.multiInputNum = this.flag.rows.multiInput + 1;
+    this.flag.rows.lastInput = this.flag.rows.multiInputNum;
+    this.flag.rows.num = this.flag.rows.lastInput - this.flag.cols.labelInput;
     this.declaration.rows.labelInput = 1;
     this.declaration.rows.firstInput = 2;
     this.declaration.rows.dateInput = 2;
@@ -197,10 +200,28 @@ class BotSheet extends SheetInfo {
   }
 
   set setRequestType ( flagValue ) {
-    const funcName = `${ this.className }.setRequestType`
-    if ( flagValue == '' ) {
+    const funcName = `${ this.className }.setRequestType`;
+    const multiInputFlag = this.flag.values.multiInput ?? this.multiInputFlagValue();
+    const multiInputNum = this.flag.values.multiInputNum ?? this.multiInputNumValue();
+    const logRequest = () => {
+      if ( debug ) {
+        log( funcName, this._requestType, { label: "this._requestType", } );
+        log( funcName, this._inputStage, { label: "this._inputStage", } );
+        log( funcName, this.input.cols.now, { label: "this.input.cols.now", } );
+        log( funcName, multiInputFlag, { label: "multiInputFlag", } );
+        log( funcName, multiInputNum, { label: "multiInputNum", } );
+      }
+    };
+    if ( flagValue == "" && multiInputFlag == "on" && !multiInputNum ) {
+      this._requestType = "multi";
+      this._inputStage = "number";
+      logRequest();
+      return;
+    } else if ( flagValue == '' ) {
       this._requestType = 'start';
       this._inputStage = '';
+      logRequest();
+      return;
     } else if ( flagValue == 'kc' ) {
       this._requestType = 'kc_input';
       this._inputStage = 'all';
@@ -208,6 +229,8 @@ class BotSheet extends SheetInfo {
       this.isDeclarationOrAlias = true;
       this.isDeclaration = true;
       this.isAlias = false;
+      logRequest();
+      return;
     } else if ( flagValue == 'ld' ) {
       this._requestType = 'ld_input';
       this._inputStage = 'all';
@@ -215,6 +238,8 @@ class BotSheet extends SheetInfo {
       this.isDeclarationOrAlias = true;
       this.isDeclaration = true;
       this.isAlias = false;
+      logRequest();
+      return;
     } else if ( flagValue == 'tl' ) {
       this._requestType = 'tl_input';
       this._inputStage = 'all';
@@ -222,6 +247,8 @@ class BotSheet extends SheetInfo {
       this.isDeclarationOrAlias = true;
       this.isDeclaration = true;
       this.isAlias = false;
+      logRequest();
+      return;
     } else if ( flagValue == 'bt' ) {
       this._requestType = 'bt_input';
       this._inputStage = 'all';
@@ -229,58 +256,54 @@ class BotSheet extends SheetInfo {
       this.isDeclarationOrAlias = true;
       this.isDeclaration = true;
       this.isAlias = false;
+      logRequest();
+      return;
+    }
+    if( flagValue == 'on' ) {
+      this._requestType = 'dc_input';
+      this.input.cols.now = this._currentUser.cols.declaration;
+      this.isDeclarationOrAlias = true;
+      this.isDeclaration = true;
+      this.isAlias = false;
+    } else if( flagValue == 'al' ) {
+      this._requestType = 'al_input';
+      this.input.cols.now = this._currentUser.cols.alias;
+      this.isDeclarationOrAlias = true;
+      this.isDeclaration = false;
+      this.isAlias = true;
     } else {
-      if( flagValue == 'on' ) {
-        this._requestType = 'dc_input';
-        this.input.cols.now = this._currentUser.cols.declaration;
-        this.isDeclarationOrAlias = true;
-        this.isDeclaration = true;
-        this.isAlias = false;
-      } else if( flagValue == 'al' ) {
-        this._requestType = 'al_input';
-        this.input.cols.now = this._currentUser.cols.alias;
-        this.isDeclarationOrAlias = true;
-        this.isDeclaration = false;
-        this.isAlias = true;
-      } else {
-        this.isDeclarationOrAlias = false;
-        this.isDeclaration = false;
-        this.isAlias = false;
-        return;
-      }
-      const nowRow = this.getNowInputRow();
-      if ( debug ) {
-        log( funcName, nowRow, "nowRow" );
-      }
-      if ( nowRow == 2 ) {
-        this._inputStage = 'category';
-      } else if ( nowRow == 3 ) {
-        this._inputStage = 'tax';
-      } else if ( nowRow == 4 ) {
-        this._inputStage = 'price';
-      } else if ( nowRow == 5 ) {
-        this._inputStage = 'detail';
-      } else if ( nowRow == 6 ) {
-        if ( this._requestType == 'dc_input' ) {
-          this._requestType = 'conf_dc';
-          this._inputStage = 'conf_dc';
-        } else if ( this._requestType == 'al_input' ) {
-          this._requestType = 'conf_al';
-          this._inputStage = 'conf_al';
-        }
-      } else {
-        if ( this._requestType == "dc_input" ) {
-          this._inputStage = "date";
-        } else if ( this._requestType == "al_input" ) {
-          this._inputStage = "key";
-        }
-      }
+      this.isDeclarationOrAlias = false;
+      this.isDeclaration = false;
+      this.isAlias = false;
     }
+    const nowRow = this.getNowInputRow();
     if ( debug ) {
-      log( funcName, this._requestType, "this._requestType" );
-      log( funcName, this._inputStage, "this._inputStage" );
-      log( funcName, this.input.cols.now, "this.input.cols.now" );
+      log( funcName, nowRow, "nowRow" );
     }
+    if ( nowRow == 2 ) {
+      this._inputStage = 'category';
+    } else if ( nowRow == 3 ) {
+      this._inputStage = 'tax';
+    } else if ( nowRow == 4 ) {
+      this._inputStage = 'price';
+    } else if ( nowRow == 5 ) {
+      this._inputStage = 'detail';
+    } else if ( nowRow == 6 ) {
+      if ( this._requestType == 'dc_input' ) {
+        this._requestType = 'conf_dc';
+        this._inputStage = 'conf_dc';
+      } else if ( this._requestType == 'al_input' ) {
+        this._requestType = 'conf_al';
+        this._inputStage = 'conf_al';
+      }
+    } else {
+      if ( this._requestType == "dc_input" ) {
+        this._inputStage = "date";
+      } else if ( this._requestType == "al_input" ) {
+        this._inputStage = "key";
+      }
+    }
+    logRequest();
   }
 
   set setCurrentUser( uid ) {
@@ -288,7 +311,7 @@ class BotSheet extends SheetInfo {
     const users = listSh.getRawUserValues();
     const ids = listSh.user.values.uid;
     if ( debug ) {
-      log( funcName, ids, "ids" );
+      log( funcName, ids, { label: "ids", } );
     }
     this._currentUser.index = ids.indexOf( uid );
     if ( this._currentUser.index < 0 ) {
@@ -303,7 +326,7 @@ class BotSheet extends SheetInfo {
     this._currentUser.name = users[ this._currentUser.index ][ 1 ];
     this._currentUser.hello = `${ this._currentUser.name }さん、こんにちは。`;
     if ( debug ) {
-      log( funcName, this._currentUser, "this._currentUser" );
+      log( funcName, this._currentUser, { label: "this._currentUser", } );
     }
   }
 
@@ -399,7 +422,7 @@ class BotSheet extends SheetInfo {
       .getNextDataCell( SpreadsheetApp.Direction.DOWN )
       .getRow();
     if ( debug ) {
-      log( funcName, nowInputRow, "nowInputRow" );
+      log( funcName, nowInputRow, { label: "nowInputRow", } );
     }
     const firstInputValue = this.getFirstInputCellValue();
     if ( firstInputValue && nowInputRow > this.input.rows.label && lastRow >= nowInputRow ) {
@@ -419,10 +442,78 @@ class BotSheet extends SheetInfo {
     return this.flag.ranges.valueCell;
   }
 
+  multiInputFlagCellRange() {
+    const funcName = `${ this.className }.multiInputFlagCellRange()`;
+    try {
+      this.flag.ranges.multiInput = this.sheet.getRange(
+        this.flag.rows.multiInput,
+        this._currentUser.cols.flag
+      );
+      return this.flag.ranges.multiInput;
+    } catch( e ) {
+      throw buildLogLabel( funcName, "error" ) + e;
+    }
+  }
+
+  multiInputNumCellRange() {
+    const funcName = `${ this.className }.multiInputNumCellRange()`;
+    try {
+      this.flag.ranges.multiInputNum = this.sheet.getRange(
+        this.flag.rows.multiInputNum,
+        this._currentUser.cols.flag
+      );
+      return this.flag.ranges.multiInputNum;
+    } catch( e ) {
+      throw buildLogLabel( funcName, "error" ) + e;
+    }
+  }
+
+  allFlagCellsRange() {
+    try {
+      this.flag.ranges.noLabel = this.sheet.getRange(
+        this.flag.rows.firstInput,
+        this._currentUser.cols.flag,
+        this.flag.rows.num,
+        1
+      );
+      return this.flag.ranges.noLabel;
+    } catch( e ) {
+      throw buildLogLabel( funcName, "error" ) + e;
+    }
+  }
+
   getFlagValue() {
     const cell = this.getFlagCell();
     this.flag.values.raw = cell.getValue();
     return this.flag.values.raw;
+  }
+
+  multiInputFlagValue() {
+    const funcName = this.className + ".multiInputFlagValue()";
+    const range = this.flag.ranges.multiInput ?? this.multiInputFlagCellRange();
+    if ( !range ) {
+      throw buildLogLabel( funcName, "error" ) + "The range is invalid.";
+    }
+    try {
+      this.flag.values.multiInput = range.getValue();
+      return this.flag.values.multiInput;
+    } catch( e ) {
+      throw buildLogLabel( funcName, "error" ) + e;
+    }
+  }
+
+  multiInputNumValue() {
+    const funcName = this.className + ".multiInputNumValue()";
+    const range = this.flag.ranges.multiInputNum ?? this.multiInputNumCellRange();
+    if ( !range ) {
+      throw buildLogLabel( funcName, "error" ) + "The range is invalid.";
+    }
+    try {
+      this.flag.values.multiInputNum = range.getValue();
+      return this.flag.values.multiInputNum;
+    } catch( e ) {
+      throw buildLogLabel( funcName, "error" ) + e;
+    }
   }
 
   getFirstInputCell() {
@@ -503,6 +594,18 @@ class BotSheet extends SheetInfo {
     const range = this.getInputRange();
     this.input.values.all = range.getValues();
     return this.input.values.all;
+  }
+
+  putMultiInputNum( value ) {
+    const range = this.flag.ranges.multiInputNum ?? this.multiInputNumCellRange();
+    if ( !range ) {
+      throw buildLogLabel( funcName, "error" ) + "The range is invalid.";
+    }
+    try {
+      range.setValue( value );
+    } catch( e ) {
+      throw buildLogLabel( funcName, "error" ) + e;
+    }
   }
 
   addDeclarationContent( message ) {
@@ -618,16 +721,12 @@ class FormatSheet extends SheetInfo {
 
   getConsumptionCols() {
     const funcName = `${ this.className }.getConsumptionCols`;
-    if ( debug ) {
-      console.log( `[DEBUG: ${ funcName }] this.consumption.cols ↓` );
-      console.log( this.consumption.cols );
-    }
     return this.consumption.cols;
   }
 
   getConsumptionPriceColsNum() {
     const funcName = `${ this.className }.getConsumptionPriceColsNum`;
-    const cols = this.getConsumptionCols();
+    const cols = this.consumption.cols;
     this.consumption.numbers.priceCols = cols.lastPriceInput - cols.firstPriceInput + 1;
     if ( debug ) {
       console.log( `[DEBUG: ${ funcName }] this.consumption.numbers.priceCols: ${ this.consumption.numbers.priceCols }` );
@@ -674,12 +773,12 @@ class MonthSheet extends FormatSheet {
     const funcName = `${ this.className }.getPriceRange`;
     this.consumption.ranges.price = this.sheet.getRange(
       this.input.rows.first,
-      this.getConsumptionCols().firstPriceInput,
+      this.consumption.cols.firstPriceInput,
       this.getRawConsumptionsNum(),
       this.getConsumptionPriceColsNum()
     );
     if ( debug ) {
-      log( funcName, this.consumption.ranges.price, "this.consumption.ranges.price" );
+      log( funcName, this.consumption.ranges.price, { label: "this.consumption.ranges.price", } );
     }
     return this.consumption.ranges.price;
   }
@@ -692,7 +791,7 @@ class MonthSheet extends FormatSheet {
       1, 1
     );
     if ( debug ) {
-      log( funcName, this.consumption.ranges.firstInput, "this.consumption.ranges.firstInput" );
+      log( funcName, this.consumption.ranges.firstInput, { label: "this.consumption.ranges.firstInput", } );
     }
     return this.consumption.ranges.firstInput;
   }
@@ -716,21 +815,23 @@ class MonthSheet extends FormatSheet {
       this.input.rows.next = this.consumption.rows.nextInput;
     }
     if ( debug ) {
-      log( funcName, this.input.rows.next, "this.input.rows.next" );
+      log( funcName, this.input.rows.next, { label: "this.input.rows.next", } );
     }
-    const targetRange = this.sheet.getRange(
-      this.input.rows.next,
-      this.consumption.cols.firstInput,
-      1,
-      this.getConsumptionCols().num
-    );
-    if ( debug ) {
-      log( funcName, targetRange.getValues(), "targetRange.getValues" );
+    try {
+      const targetRange = this.sheet.getRange(
+        this.input.rows.next,
+        this.consumption.cols.firstInput,
+        1,
+        this.consumption.cols.num
+      );
+      if ( debug ) {
+        log( funcName, targetRange.getValues(), { label: "targetRange.getValues", } );
+      }
+      targetRange.setValues( inputs );
+      log( funcName, "申告シート入力完了", { type: "info" } );
+    } catch( e ) {
+      throw buildLogLabel( funcName, "error" ) + e;
     }
-    targetRange.setValues( inputs );
-    log( funcName, "申告シート入力完了", "", { type: "info" } );
-    sort( this.sheet ) // 日付順に並び替え
-    calcTax( this.sheet );
   }
 }
 
