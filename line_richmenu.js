@@ -13,10 +13,9 @@ function createRichmenu( data, type = "" )
   try {
     const options = optionsRequest( "post", data, "application/json" );
     const response = UrlFetchApp.fetch( url, options );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    const responseCode = response.getResponseCode()
+    log( funcName, responseCode, { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", type: "info", } );
     return JSON.parse( response );
   } catch ( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
@@ -26,15 +25,18 @@ function createRichmenu( data, type = "" )
 function deleteRichMenu( richMenuId )
 {
   const funcName = "deleteRichMenu";
+  let responseCode;
   try {
     const options = optionsRequest( "delete" );
     const response = UrlFetchApp.fetch( URL_RICHMENU_API + richMenuId, options );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    responseCode = response.getResponseCode()
+    log( funcName, responseCode, { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", type: "info", } );
   } catch( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
+  }
+  if ( responseCode != 200 ) {
+    throw buildLogLabel( funcName, "error" ) + "The response code is not 200.";
   }
 }
 
@@ -79,10 +81,9 @@ function getRichmenus() {
   const url = URL_RICHMENU_API + '/list';
   try {
     const response = UrlFetchApp.fetch( url, optionsRequest( "get" ) );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    const responseCode = response.getResponseCode()
+    log( funcName, responseCode, { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", type: "info", } );
     const jsonRes = JSON.parse( response );
     return jsonRes;
   } catch ( e ) {
@@ -98,8 +99,9 @@ function getRichmenus() {
  * @param {string} driveFileId - GoogleDriveのファイルID
  * @return {Object} json - 結果
  */
-function setRichmenuImage( richmenuId, driveFileId )
+function setRichmenuImage( richmenuId, driveFileId, imageType = "jpeg" )
 {
+  let responseCode;
   const funcName = "setRichmenuImage";
   const url = URL_RICHMENU_DATA_API + '/' + richmenuId + '/content';
   try {
@@ -107,34 +109,39 @@ function setRichmenuImage( richmenuId, driveFileId )
     if ( debug ) {
       log( funcName, image, { label: "image", } );
     }
-    const blob = image.getAs( "image/jpeg" );
+    const blob = image.getAs( "image/" + imageType );
     if ( debug ) {
       log( funcName, blob, { label: "blob", } );
     }
-    const options = optionsRequest( "post", blob, "image/jpeg", false );
+    const options = optionsRequest( "post", blob, "image/" + imageType, false );
     const response = UrlFetchApp.fetch( url, options );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    responseCode = response.getResponseCode()
+    log( funcName, responseCode, { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", type: "info", } );
   } catch( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
+  }
+  if ( responseCode != 200 ) {
+    throw buildLogLabel( funcName, "error" ) + "The response code is not 200.";
   }
 }
 
 function setDefaultRichMenu( richMenuId )
 {
   const funcName = "setDefaultRichMenu";
+  let responseCode;
   const url = URL_RICHMENU_DEFAULT_API + richMenuId;
   try {
     const options = optionsRequest( "post" );
     const response = UrlFetchApp.fetch( url, options );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    responseCode = response.getResponseCode()
+    log( funcName, responseCode, { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", type: "info", } );
   } catch( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
+  }
+  if ( responseCode != 200 ) {
+    throw buildLogLabel( funcName, "error" ) + "The response code is not 200.";
   }
 }
 
@@ -144,10 +151,9 @@ function getDefaultRichMenuId()
   try {
     const options = optionsRequest( "get" );
     const response = UrlFetchApp.fetch( URL_RICHMENU_DEFAULT_API, options );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    const responseCode = response.getResponseCode()
+    log( funcName, responseCode, { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", type: "info", } );
     const jsonRes = JSON.parse( response );
     return jsonRes;
   } catch ( e ) {
@@ -163,15 +169,18 @@ function createRichMenuAlias( richMenuId, aliasId )
     'richMenuAliasId': aliasId,
     'richMenuId': richMenuId,
   };
+  let responseCode;
   try {
     const options = optionsRequest( "post", postData, "application/json" );
     const response = UrlFetchApp.fetch( url, options );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    responseCode = response.getResponseCode()
+    log( funcName, responseCode, { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", type: "info", } );
   } catch( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
+  }
+  if ( responseCode != 200 ) {
+    throw buildLogLabel( funcName, "error" ) + "The response code is not 200.";
   }
 }
 
@@ -203,10 +212,9 @@ function getAliasMenus()
   try {
     const options = optionsRequest( "get" );
     const response = UrlFetchApp.fetch( url, options );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    const responseCode = response.getResponseCode()
+    log( funcName, responseCode, { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", type: "info", } );
     return JSON.parse( response );
   } catch( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
@@ -236,15 +244,18 @@ function deleteAllAliasMenus()
 function deleteAliasMenu( aliasMenuId )
 {
   const funcName = "deleteAliasMenu";
+  let responseCode;
   const url = URL_RICHMENU_ALIAS_API + aliasMenuId;
   try {
     const options = optionsRequest( "delete" );
     const response = UrlFetchApp.fetch( url, options );
-    log( funcName, response.getResponseCode(), "response code", { type : "info" } );
-    if ( debug ) {
-      log( funcName, response.getContentText(), "response text" );
-    }
+    responseCode = response.getResponseCode()
+    log( funcName, responseCode, { type : "info", label: "response code" } );
+    log( funcName, response.getContentText(), { label: "response text", type: "info", } );
   } catch( e ) {
     throw buildLogLabel( funcName, "error" ) + e;
+  }
+  if ( responseCode != 200 ) {
+    throw buildLogLabel( funcName, "error" ) + "The response code is not 200.";
   }
 }

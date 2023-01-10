@@ -232,7 +232,7 @@ const othersRichMenu = {
         'x': 0,
         'y': 213,
         'width': 1250,
-        'height': 912,
+        'height': 610,
       },
       'action': {
         'type': 'message',
@@ -244,7 +244,7 @@ const othersRichMenu = {
         'x': 1250,
         'y': 213,
         'width': 1250,
-        'height': 912,
+        'height': 610,
       },
       'action': {
         'type': 'message',
@@ -254,9 +254,21 @@ const othersRichMenu = {
     {
       'bounds': {
         'x': 0,
-        'y': 213 + 912,
+        'y': 213 + 610,
         'width': 2500,
-        'height': 438,
+        'height': 370,
+      },
+      'action': {
+        'type': 'message',
+        'text': 'エイリアス',
+      },
+    },
+    {
+      'bounds': {
+        'x': 0,
+        'y': 213 + 610 + 370,
+        'width': 2500,
+        'height': 370,
       },
       'action': {
         'type': 'message',
