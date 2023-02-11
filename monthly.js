@@ -43,29 +43,29 @@ function autoCopy()
 /*
 * LINE Notify
 */
-function line_notify( message )
-{
-  url = "https://notify-api.line.me/api/notify";
-
-  data = {
-    "message": message
+function line_notify( message ) {
+  const funcName = "line_notify";
+  const url = "https://notify-api.line.me/api/notify";
+  if ( !isReleased ) {
+    message = "【テスト実行　※※無視してください※※】\n\n" + message;
+  }
+  const data = {
+    "message": message,
   };
-
-  options = {
+  const options = {
     "method": "post",
     "contentType": "application/x-www-form-urlencoded",
     "muteHttpExceptions": true,
     "headers": {
       "Authorization": "Bearer " + notify_token
     },
-    "payload": data
+    "payload": data,
   };
-
   try {
-    const res = UrlFetchApp.fetch(url, options);
-    Logger.log( res );
-  } catch(e) {
-    Logger.log('Error:' + e);
+    const res = UrlFetchApp.fetch( url, options );
+    log( funcName, res, { label: "res", type: "info" } );
+  } catch( e ) {
+    throw log( funcName, e.message, { type: "error", output: "return", } );
   }
 }
 
@@ -114,7 +114,7 @@ function notify_result()
   const reward_yohei_str = reward_yohei.toLocaleString();
   sum = sum + reward_yohei;
   message = message + "陽平：" + reward_yohei_str + "円" + u_nl + u_nl;
-  sum = orgCeil(sum, 10000);
+  sum = orgCeil(sum, 1000);
   const sum_str = sum.toLocaleString();
   half_sum = sum / 2;
   const half_sum_str = half_sum.toLocaleString();
@@ -144,7 +144,7 @@ function notify_result()
     {
       name: 'YouTube利用料',
       label: 'youtube',
-      fee: 200,
+      fee: 400,
       owe: 'kentaro',
     },
   ];
